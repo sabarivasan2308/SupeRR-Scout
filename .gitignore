@@ -1,0 +1,37 @@
+# Byte-compiled / optimized / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Environment and Secrets
+.env
+.env.*
+.streamlit/secrets.toml
+
+# Challenge Datasets (Raw & Processed)
+data/raw/
+data/processed/
+*.pkl
+*.parquet
+
+# Challenge-Derived Reports & Problem Statement
+assets/*.csv
+assets/*.pdf
+assets/problem_statement.txt
+
+# Audit and Verification Reports
+FINAL_AUDIT_REPORT.md
+FINAL_AUDIT_SUMMARY.json
+audit_pipeline.py
+test_id_audit.py
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
