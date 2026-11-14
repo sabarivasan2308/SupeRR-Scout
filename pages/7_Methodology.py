@@ -14,6 +14,7 @@ from src.ui_helpers import inject_custom_css
 from src.visualizations import (
     apply_rr_theme, RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY, RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN
 )
+from src.data_dictionary import get_data_dictionary, get_methodology_glossary, get_pipeline_stages
 
 st.set_page_config(page_title="Methodology & Transparency | SupeRR SCOUT", page_icon="📐", layout="wide")
 inject_custom_css()
@@ -76,10 +77,12 @@ with k4:
 st.markdown("<br/>", unsafe_allow_html=True)
 
 
-# ==================== 3. THREE DETAILED TABS ====================
-m1, m2, m3 = st.tabs([
+# ==================== 3. FIVE COMPREHENSIVE TRANSPARENCY TABS ====================
+m1, m2, m3, m4, m5 = st.tabs([
     "📐 Mathematical Formulations",
-    "📊 Bayesian Credibility & Uncertainty Simulator",
+    "🔄 End-to-End Pipeline Workflow",
+    "📊 Bayesian Shrinkage & Live Sandbox",
+    "📖 Data Dictionary & Feature Glossary",
     "🛡️ Statistical Defenses & Limitations"
 ])
 
@@ -92,7 +95,7 @@ with m1:
     In run chases, pressure is driven by the arithmetic challenge of reaching the target:
     """)
     st.latex(r"P_{\text{chase\_bat}} = 0.40 \cdot R_{\text{demand}} + 0.25 \cdot W_{\text{lost}} + 0.20 \cdot S_{\text{stage}} + 0.15 \cdot L_{\text{closeness}}")
-    st.markdown("""
+    st.markdown(r"""
     Where:
     - **$R_{\text{demand}}$**: Scaled required run rate (RRR) relative to par. RRR $\le 4.0 \rightarrow 10$, RRR $= 8.5 \rightarrow 45$, RRR $= 14.0 \rightarrow 90$, RRR $\ge 18.0 \rightarrow 100$.
     - **$W_{\text{lost}}$**: Wickets lost urgency: $\min\left(100, \left(\frac{\text{wickets\_lost}}{9.0}\right)^{1.15} \times 100\right)$.
@@ -104,7 +107,7 @@ with m1:
     In the first innings where no fixed target exists, pressure stems from collapse crises and death-over scoring demands:
     """)
     st.latex(r"P_{\text{1st\_bat}} = 0.45 \cdot W_{\text{crisis}} + 0.35 \cdot S_{\text{phase}} + 0.20 \cdot R_{\text{deficit}}")
-    st.markdown("""
+    st.markdown(r"""
     Where:
     - **$W_{\text{crisis}}$**: Wickets lost ahead of the empirical over-by-over progression curve.
     - **$S_{\text{phase}}$**: Innings stage urgency (Powerplay: 25-40, Middle: 40-65, Death: 70-100).
@@ -114,7 +117,7 @@ with m1:
     For bowlers, pressure represents the difficulty and margin of error in defending against the opposition:
     """)
     st.latex(r"P_{\text{chase\_bowl}} = 0.35 \cdot R_{\text{threat}} + 0.25 \cdot S_{\text{stage}} + 0.20 \cdot W_{\text{in\_hand}} + 0.20 \cdot M_{\text{margin}}")
-    st.markdown("""
+    st.markdown(r"""
     Where:
     - **$R_{\text{threat}}$**: Peaks when the chase is in active balance (RRR 6.0 to 12.0 in late overs).
     - **$W_{\text{in\_hand}}$**: Opposition batting resources (more opposition wickets in hand = higher threat).
@@ -156,8 +159,47 @@ with m1:
         st.plotly_chart(apply_rr_theme(fig_w_bowl), use_container_width=True)
 
 with m2:
+    st.markdown("### 🔄 End-to-End Analytics Workflow Pipeline")
+    st.caption("Visual architecture representing the six computational transformation stages from raw deliveries to franchise recruitment dossiers.")
+    
+    stages = get_pipeline_stages()
+    for s in stages:
+        st.markdown(f"""
+        <div style="background: #111A32; border: 1px solid #1D2B52; border-left: 4px solid #E6007E; border-radius: 10px; padding: 14px 20px; margin-bottom: 12px;">
+            <div style="font-size: 15px; font-weight: 800; color: #F7F8FC;">
+                {s['Icon']} {s['Stage']}
+            </div>
+            <div style="font-size: 13px; color: #A8B3CC; margin-top: 4px;">
+                {s['Details']}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+with m3:
     st.markdown("### 📊 Interactive Bayesian Shrinkage & Uncertainty Simulator")
     st.caption("Explore how Empirical Bayes protects leaderboards against small-sample noise and calculates 95% Confidence Intervals.")
+    
+    # Interactive Sandbox Slider
+    st.markdown("""
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px;">
+        <b style="color: #E6007E;">🎛️ Live Empirical Bayes Sandbox</b><br/>
+        <span style="font-size: 12px; color: #A8B3CC;">Test any sample size to observe real-time shrinkage weights and margin-of-error narrowing:</span>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    sandbox_n = st.slider("Select Sample Size (High-Pressure Deliveries):", min_value=10, max_value=300, value=75, step=5, key="sandbox_n_slider")
+    sandbox_w = (sandbox_n / (sandbox_n + 50.0)) * 100.0
+    sandbox_ci = 1.96 * (16.0 / np.sqrt(sandbox_n / 25.0))
+    
+    sb1, sb2, sb3 = st.columns(3)
+    with sb1:
+        st.metric("Sample Size", f"{sandbox_n} balls", help="Observed deliveries under match pressure ≥ 65.0")
+    with sb2:
+        st.metric("Data Credibility Weight (w_i)", f"{sandbox_w:.1f}%", help="Weight given to observed player stats vs prior baseline (K=50)")
+    with sb3:
+        st.metric("95% CI Margin of Error", f"± {sandbox_ci:.1f} pts", help="Asymptotic propagation uncertainty interval")
+        
+    st.markdown("<br/>", unsafe_allow_html=True)
     
     col_sim_l, col_sim_r = st.columns(2)
     
@@ -192,7 +234,25 @@ with m2:
     with col_sim_r:
         st.plotly_chart(apply_rr_theme(fig_ci), use_container_width=True)
 
-with m3:
+with m4:
+    st.markdown("### 📖 Formal Data Dictionary & Methodology Glossary")
+    st.caption("Complete technical specifications of operational features and scientific terminology.")
+    
+    sub_dict_tab, sub_gloss_tab = st.tabs(["📋 Data Dictionary", "📚 Analytical Glossary"])
+    with sub_dict_tab:
+        dict_df = get_data_dictionary()
+        search_feat = st.text_input("Filter Features:", placeholder="Type feature name...", key="dict_search_feat")
+        if search_feat.strip():
+            dict_df = dict_df[dict_df["Feature"].str.contains(search_feat.strip(), case=False, na=False)]
+        st.dataframe(dict_df, use_container_width=True, hide_index=True)
+        
+    with sub_gloss_tab:
+        glossary = get_methodology_glossary()
+        for g in glossary:
+            with st.expander(f"📌 {g['Term']}"):
+                st.markdown(f"<div style='font-size: 13px; color: #F7F8FC; line-height: 1.5;'>{g['Definition']}</div>", unsafe_allow_html=True)
+
+with m5:
     st.markdown("### 🛡️ Statistical Defenses & Limitations")
     st.markdown("""
     #### 1. Why Aggregate Averages Fail Under Pressure

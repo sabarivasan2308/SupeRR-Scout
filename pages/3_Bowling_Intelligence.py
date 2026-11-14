@@ -15,6 +15,7 @@ from src.ui_helpers import (
 )
 from src.visualizations import (
     apply_rr_theme, plot_bowling_scatter, plot_pressure_vs_normal_comparison,
+    plot_phase_comparison_grouped, plot_metric_distribution_box,
     RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY, RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN
 )
 from src.player_profiles import build_bowler_evidence_card
@@ -248,6 +249,26 @@ with tab1:
     st.markdown(f"#### Bowling Reliability Ranking (Min {min_opps} HP Legal Balls Bowled)")
     st.caption("Click any bar on the chart to spotlight that bowler and filter all subsequent analyses.")
 
+    # Metric Sorter
+    col_sort_l, col_sort_r = st.columns([1.4, 2.6])
+    with col_sort_l:
+        sort_metric = st.selectbox(
+            "Sort Cohort Table By:",
+            options=["Reliability Score", "HP Economy (Lowest to Highest)", "HP Wickets (Highest to Lowest)", "Dot Ball %", "Clutch Delta (Δ Econ)", "HP Balls Bowled"],
+            key="sel_bowl_sort_metric"
+        )
+    
+    sort_col_map = {
+        "Reliability Score": ("reliability_score", False),
+        "HP Economy (Lowest to Highest)": ("hp_economy", True),
+        "HP Wickets (Highest to Lowest)": ("hp_wickets", False),
+        "Dot Ball %": ("hp_dot_pct", False),
+        "Clutch Delta (Δ Econ)": ("econ_delta", True),
+        "HP Balls Bowled": ("hp_legal_balls", False)
+    }
+    col_to_sort, asc = sort_col_map[sort_metric]
+    sorted_bowlers = eligible_bowlers.sort_values(col_to_sort, ascending=asc).reset_index(drop=True)
+
     c_chart, c_tbl = st.columns([1.1, 0.9])
     
     with c_chart:
@@ -261,18 +282,18 @@ with tab1:
                 st.rerun()
 
     with c_tbl:
-        st.markdown("##### Full Qualified Cohort Table")
+        st.markdown(f"##### Full Qualified Cohort (Sorted by {sort_metric})")
         disp_cols = [
             "rank", "player_name", "reliability_score", "hp_legal_balls", "hp_overs",
             "hp_wickets", "hp_economy", "hp_strike_rate", "hp_dot_pct", "econ_delta", "ci_lower", "ci_upper"
         ]
-        tbl_disp = eligible_bowlers[disp_cols].copy()
+        tbl_disp = sorted_bowlers[disp_cols].copy()
         tbl_disp["95% CI"] = tbl_disp.apply(lambda r: f"[{r['ci_lower']:.1f}-{r['ci_upper']:.1f}]", axis=1)
         tbl_disp.drop(columns=["ci_lower", "ci_upper"], inplace=True)
         tbl_disp.columns = ["Rank", "Player", "Score", "HP Balls", "Overs", "Wkts", "HP Econ", "Strike Rate", "Dot %", "Δ Econ", "95% CI"]
         st.dataframe(tbl_disp, use_container_width=True, hide_index=True)
         
-        csv_data = eligible_bowlers.to_csv(index=False).encode("utf-8")
+        csv_data = sorted_bowlers.to_csv(index=False).encode("utf-8")
         st.download_button(
             "📥 Export Bowling Leaderboard (CSV)",
             data=csv_data,
@@ -281,32 +302,52 @@ with tab1:
         )
 
 with tab2:
-    st.markdown("#### 🎯 Containment vs Wicket-Taking & Pressure Heatmap")
-    st.caption("Top-right of the matrix indicates elite containment and lethal strike rates. Heatmap shows economy across 5 pressure bands.")
+    st.markdown("#### 🎯 Containment, Pressure Heatmap & Phase Spread")
     
-    col_mat_l, col_mat_r = st.columns(2)
-    with col_mat_l:
-        fig_scatter = plot_bowling_scatter(bowl_ranked, min_balls=min_opps)
-        st.plotly_chart(fig_scatter, use_container_width=True)
-        
-        st.markdown("""
-        <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; font-size: 12px; color: #A8B3CC;">
-            <b style="color: #F7F8FC;">Matrix Quadrant Guide:</b><br/>
-            • <b style="color: #E6007E;">Top-Right (Golden Zone):</b> Low Econ (<8.5) + Rapid Wickets (SR < 12). Elite clutch assets like Sunil Narine and Rashid Khan.<br/>
-            • <b style="color: #287BFF;">Top-Left (Stranglers):</b> Low Econ (<8.0) + Moderate Wickets. Chokes run rate and forces mistakes.<br/>
-            • <b style="color: #F39C12;">Bottom-Right (Death Enforcers):</b> Higher Econ (>9.5) + High Wicket Volumes. Death-over wicket hounds like Arshdeep Singh.
-        </div>
-        """, unsafe_allow_html=True)
+    subtab_mat, subtab_comp = st.tabs(["📊 Containment Matrix & Heatmap", "⏱️ Bowler Phase Comparison & Economy Spread"])
+    
+    with subtab_mat:
+        col_mat_l, col_mat_r = st.columns(2)
+        with col_mat_l:
+            fig_scatter = plot_bowling_scatter(bowl_ranked, min_balls=min_opps)
+            st.plotly_chart(fig_scatter, use_container_width=True)
+            
+            st.markdown("""
+            <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; font-size: 12px; color: #A8B3CC;">
+                <b style="color: #F7F8FC;">Matrix Quadrant Guide:</b><br/>
+                • <b style="color: #E6007E;">Top-Right (Golden Zone):</b> Low Econ (<8.5) + Rapid Wickets (SR < 12). Elite clutch assets like Sunil Narine and Rashid Khan.<br/>
+                • <b style="color: #287BFF;">Top-Left (Stranglers):</b> Low Econ (<8.0) + Moderate Wickets. Chokes run rate and forces mistakes.<br/>
+                • <b style="color: #F39C12;">Bottom-Right (Death Enforcers):</b> Higher Econ (>9.5) + High Wicket Volumes. Death-over wicket hounds like Arshdeep Singh.
+            </div>
+            """, unsafe_allow_html=True)
 
-    with col_mat_r:
-        fig_heat = build_pbi_heatmap_chart(
-            filtered_df,
-            eligible_bowlers,
-            is_batter=False,
-            selected_player=focus_p,
-            top_n=8
-        )
-        st.plotly_chart(fig_heat, use_container_width=True)
+        with col_mat_r:
+            fig_heat = build_pbi_heatmap_chart(
+                filtered_df,
+                eligible_bowlers,
+                is_batter=False,
+                selected_player=focus_p,
+                top_n=8
+            )
+            st.plotly_chart(fig_heat, use_container_width=True)
+
+    with subtab_comp:
+        col_c_left, col_c_right = st.columns(2)
+        with col_c_left:
+            top_p_list = eligible_bowlers.head(4)["player_name"].tolist()
+            if focus_p and focus_p not in top_p_list:
+                top_p_list = [focus_p] + top_p_list[:3]
+            fig_phase_grouped = plot_phase_comparison_grouped(filtered_df, top_p_list, is_batter=False)
+            st.plotly_chart(fig_phase_grouped, use_container_width=True)
+            
+        with col_c_right:
+            fig_box = plot_metric_distribution_box(
+                eligible_bowlers,
+                metric_col="hp_economy",
+                title="Cohort High-Pressure Economy Consistency Spread",
+                is_batter=False
+            )
+            st.plotly_chart(fig_box, use_container_width=True)
 
 with tab3:
     st.markdown("#### 👤 Individual Bowler Evidence Dossier")

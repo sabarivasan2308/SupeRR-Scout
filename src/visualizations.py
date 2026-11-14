@@ -506,12 +506,184 @@ def plot_single_player_split(
         ))
         
         fig.update_layout(
-            title=dict(text=f"{player_name} â€” Competition Performance Breakdown (HP)", font=dict(size=15)),
+            title=dict(text=f"{player_name} — Competition Performance Breakdown (HP)", font=dict(size=15)),
             barmode="group",
             yaxis_title="Metric Value",
             height=340
         )
         
+    return apply_rr_theme(fig)
+
+
+def plot_role_distribution(dossier_df: pd.DataFrame) -> go.Figure:
+    """Pie/Donut chart displaying the empirical role breakdown of candidates."""
+    if dossier_df.empty or "primary_role" not in dossier_df.columns:
+        fig = go.Figure()
+        fig.add_annotation(text="No role data available", showarrow=False, font=dict(color=RR_MUTED, size=14))
+        return apply_rr_theme(fig)
+        
+    role_counts = dossier_df["primary_role"].value_counts().reset_index()
+    role_counts.columns = ["Role", "Count"]
+    
+    colors = [RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, RR_BLUE, RR_CYAN, RR_PURPLE]
+    
+    fig = go.Figure(go.Pie(
+        labels=role_counts["Role"],
+        values=role_counts["Count"],
+        hole=0.5,
+        marker=dict(colors=colors[:len(role_counts)], line=dict(color=RR_CARD_BG, width=2)),
+        textinfo="label+percent",
+        textfont=dict(size=11, color=RR_WHITE),
+        hovertemplate="<b>%{label}</b><br/>Players: %{value}<br/>Share: %{percent}<extra></extra>"
+    ))
+    
+    fig.add_annotation(
+        text=f"<b>{len(dossier_df)}</b><br/><span style='font-size:10px; color:{RR_MUTED};'>Shortlisted</span>",
+        x=0.5, y=0.5,
+        font=dict(size=14, color=RR_WHITE),
+        showarrow=False
+    )
+    
+    fig.update_layout(
+        title=dict(text="Candidate Cohort by Tactical Role", font=dict(size=14, color=RR_WHITE)),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+        height=360,
+        margin=dict(l=30, r=30, t=40, b=40)
+    )
+    return apply_rr_theme(fig)
+
+
+def plot_phase_comparison_grouped(
+    deliv_df: pd.DataFrame,
+    player_names: List[str],
+    is_batter: bool = True
+) -> go.Figure:
+    """Grouped bar chart comparing player execution across Powerplay, Middle, and Death overs."""
+    if not player_names or deliv_df.empty:
+        fig = go.Figure()
+        fig.add_annotation(text="Select players to generate phase comparison", showarrow=False, font=dict(color=RR_MUTED, size=14))
+        return apply_rr_theme(fig)
+        
+    p_col = "striker_name" if is_batter else "bowler_name"
+    pressure_col = "is_high_pressure_bat" if is_batter else "is_high_pressure_bowl"
+    runs_col = "runs_batter" if is_batter else "runs_bowler"
+    opp_col = "is_ball_faced_batter" if is_batter else "is_legal_ball_bowler"
+    
+    sub = deliv_df[(deliv_df[p_col].isin(player_names)) & (deliv_df[pressure_col])].copy()
+    if sub.empty:
+        # Fallback to all deliveries if high-pressure sample is small
+        sub = deliv_df[deliv_df[p_col].isin(player_names)].copy()
+        
+    agg = sub.groupby([p_col, "phase"]).agg(
+        runs=(runs_col, "sum"),
+        balls=(opp_col, "sum")
+    ).reset_index()
+    
+    if is_batter:
+        agg["metric"] = np.where(agg["balls"] > 0, (agg["runs"] / agg["balls"]) * 100.0, 0.0)
+        y_title = "Strike Rate"
+    else:
+        agg["metric"] = np.where(agg["balls"] > 0, agg["runs"] / (agg["balls"] / 6.0), 0.0)
+        y_title = "Economy (RPO)"
+        
+    fig = px.bar(
+        agg,
+        x="phase",
+        y="metric",
+        color=p_col,
+        barmode="group",
+        category_orders={"phase": ["Powerplay", "Middle", "Death"]},
+        color_discrete_sequence=[RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, RR_CYAN],
+        labels={"phase": "Match Phase", "metric": y_title, p_col: "Player"}
+    )
+    
+    fig.update_layout(
+        title=dict(text=f"Phase-by-Phase High-Pressure Performance ({y_title})", font=dict(size=14, color=RR_WHITE)),
+        height=380,
+        margin=dict(l=40, r=40, t=45, b=35)
+    )
+    return apply_rr_theme(fig)
+
+
+def plot_metric_distribution_box(
+    df: pd.DataFrame,
+    metric_col: str,
+    title: str,
+    is_batter: bool = True
+) -> go.Figure:
+    """Boxplot displaying metric consistency and cohort spread."""
+    if df.empty or metric_col not in df.columns:
+        fig = go.Figure()
+        fig.add_annotation(text="No metric data available", showarrow=False, font=dict(color=RR_MUTED, size=14))
+        return apply_rr_theme(fig)
+        
+    color = RR_PINK if is_batter else RR_ELECTRIC
+    fig = go.Figure()
+    
+    fig.add_trace(go.Box(
+        y=df[metric_col],
+        name="Cohort Distribution",
+        marker_color=color,
+        boxpoints="outliers",
+        line_width=2
+    ))
+    
+    fig.update_layout(
+        title=dict(text=title, font=dict(size=14, color=RR_WHITE)),
+        yaxis_title=metric_col.replace("_", " ").title(),
+        height=350,
+        margin=dict(l=40, r=40, t=45, b=35)
+    )
+    return apply_rr_theme(fig)
+
+
+def plot_squad_budget_chart(
+    squad_players: List[Dict[str, Any]],
+    total_purse: float = 120.0
+) -> go.Figure:
+    """Interactive Donut and bar chart showing purse allocation across drafted roles."""
+    if not squad_players:
+        fig = go.Figure()
+        fig.add_annotation(text="No players drafted yet. Add players to view budget allocation.", showarrow=False, font=dict(color=RR_MUTED, size=14))
+        return apply_rr_theme(fig)
+        
+    df = pd.DataFrame(squad_players)
+    if "bid_cr" not in df.columns:
+        df["bid_cr"] = 0.0
+        
+    role_spent = df.groupby("role")["bid_cr"].sum().reset_index()
+    total_spent = role_spent["bid_cr"].sum()
+    remaining = max(0.0, total_purse - total_spent)
+    
+    labels = role_spent["role"].tolist() + ["Remaining Purse"]
+    values = role_spent["bid_cr"].tolist() + [remaining]
+    colors = [RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, "#1D2B52"]
+    
+    fig = go.Figure(go.Pie(
+        labels=labels,
+        values=values,
+        hole=0.55,
+        marker=dict(colors=colors[:len(labels)], line=dict(color=RR_CARD_BG, width=2)),
+        textinfo="label+percent",
+        textfont=dict(size=11, color=RR_WHITE),
+        hovertemplate="<b>%{label}</b><br/>Allocation: ₹%{value:.2f} Cr<br/>Share: %{percent}<extra></extra>"
+    ))
+    
+    fig.add_annotation(
+        text=f"<b>₹{total_spent:.1f} Cr</b><br/><span style='font-size:10px; color:{RR_MUTED};'>Spent / ₹{total_purse:.0f} Cr</span>",
+        x=0.5, y=0.5,
+        font=dict(size=13, color=RR_WHITE),
+        showarrow=False
+    )
+    
+    fig.update_layout(
+        title=dict(text="Purse Allocation by Tactical Role", font=dict(size=14, color=RR_WHITE)),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.15, xanchor="center", x=0.5),
+        height=360,
+        margin=dict(l=30, r=30, t=40, b=40)
+    )
     return apply_rr_theme(fig)
 
 

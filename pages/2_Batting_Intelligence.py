@@ -15,6 +15,7 @@ from src.ui_helpers import (
 )
 from src.visualizations import (
     apply_rr_theme, plot_batting_scatter, plot_pressure_vs_normal_comparison,
+    plot_phase_comparison_grouped, plot_metric_distribution_box,
     RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY, RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN
 )
 from src.player_profiles import build_batter_evidence_card
@@ -246,6 +247,26 @@ with tab1:
     st.markdown(f"#### Batting Reliability Ranking (Min {min_opps} HP Balls Faced)")
     st.caption("Click any bar on the chart to spotlight that batter and filter all subsequent analyses.")
 
+    # Metric Sorter
+    col_sort_l, col_sort_r = st.columns([1.4, 2.6])
+    with col_sort_l:
+        sort_metric = st.selectbox(
+            "Sort Cohort Table By:",
+            options=["Reliability Score", "HP Strike Rate", "HP Average", "Boundary %", "Clutch Delta (Δ SR)", "HP Balls Faced"],
+            key="sel_bat_sort_metric"
+        )
+    
+    sort_col_map = {
+        "Reliability Score": ("reliability_score", False),
+        "HP Strike Rate": ("hp_strike_rate", False),
+        "HP Average": ("hp_average", False),
+        "Boundary %": ("hp_boundary_pct", False),
+        "Clutch Delta (Δ SR)": ("sr_delta", False),
+        "HP Balls Faced": ("hp_balls", False)
+    }
+    col_to_sort, asc = sort_col_map[sort_metric]
+    sorted_batters = eligible_batters.sort_values(col_to_sort, ascending=asc).reset_index(drop=True)
+
     c_chart, c_tbl = st.columns([1.1, 0.9])
     
     with c_chart:
@@ -259,18 +280,18 @@ with tab1:
                 st.rerun()
 
     with c_tbl:
-        st.markdown("##### Full Qualified Cohort Table")
+        st.markdown(f"##### Full Qualified Cohort (Sorted by {sort_metric})")
         disp_cols = [
             "rank", "player_name", "reliability_score", "hp_balls", "hp_runs",
             "hp_strike_rate", "hp_average", "hp_boundary_pct", "sr_delta", "ci_lower", "ci_upper"
         ]
-        tbl_disp = eligible_batters[disp_cols].copy()
+        tbl_disp = sorted_batters[disp_cols].copy()
         tbl_disp["95% CI"] = tbl_disp.apply(lambda r: f"[{r['ci_lower']:.1f}-{r['ci_upper']:.1f}]", axis=1)
         tbl_disp.drop(columns=["ci_lower", "ci_upper"], inplace=True)
         tbl_disp.columns = ["Rank", "Player", "Score", "HP Balls", "HP Runs", "HP SR", "HP Avg", "Bnd %", "Δ SR", "95% CI"]
         st.dataframe(tbl_disp, use_container_width=True, hide_index=True)
         
-        csv_data = eligible_batters.to_csv(index=False).encode("utf-8")
+        csv_data = sorted_batters.to_csv(index=False).encode("utf-8")
         st.download_button(
             "📥 Export Batting Leaderboard (CSV)",
             data=csv_data,
@@ -279,43 +300,64 @@ with tab1:
         )
 
 with tab2:
-    st.markdown("#### 🎯 Strike Rate vs Average Matrix & Phase Allocation")
-    st.caption("Bubble size indicates volume of high-pressure balls faced. Color indicates overall Reliability Score.")
+    st.markdown("#### 🎯 Batting Efficiency, Phase Dynamics & Consistency Analysis")
     
-    col_mat_l, col_mat_r = st.columns(2)
-    with col_mat_l:
-        fig_scatter = plot_batting_scatter(bat_ranked, min_balls=min_opps)
-        st.plotly_chart(fig_scatter, use_container_width=True)
-        
-        st.markdown("""
-        <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; font-size: 12px; color: #A8B3CC;">
-            <b style="color: #F7F8FC;">Matrix Quadrant Guide:</b><br/>
-            • <b style="color: #E6007E;">Top-Right (Elite Finishers):</b> High SR (>160) + High Avg (>35). Match-winners like Rinku Singh and David Miller.<br/>
-            • <b style="color: #287BFF;">Top-Left (Crisis Anchors):</b> Moderate SR (125-150) + High Avg (>40). Rebuilds collapsed innings.<br/>
-            • <b style="color: #F39C12;">Bottom-Right (Slashers):</b> Ultra SR (>175) + Low Avg (<25). 15-ball cameo weapons like Ashutosh Sharma.
-        </div>
-        """, unsafe_allow_html=True)
+    subtab_mat, subtab_comp = st.tabs(["📊 Efficiency Matrix & Phase Summary", "⏱️ Player Phase Comparison & Spread"])
+    
+    with subtab_mat:
+        col_mat_l, col_mat_r = st.columns(2)
+        with col_mat_l:
+            fig_scatter = plot_batting_scatter(bat_ranked, min_balls=min_opps)
+            st.plotly_chart(fig_scatter, use_container_width=True)
+            
+            st.markdown("""
+            <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; font-size: 12px; color: #A8B3CC;">
+                <b style="color: #F7F8FC;">Matrix Quadrant Guide:</b><br/>
+                • <b style="color: #E6007E;">Top-Right (Elite Finishers):</b> High SR (>160) + High Avg (>35). Match-winners like Rinku Singh and David Miller.<br/>
+                • <b style="color: #287BFF;">Top-Left (Crisis Anchors):</b> Moderate SR (125-150) + High Avg (>40). Rebuilds collapsed innings.<br/>
+                • <b style="color: #F39C12;">Bottom-Right (Slashers):</b> Ultra SR (>175) + Low Avg (<25). 15-ball cameo weapons like Ashutosh Sharma.
+            </div>
+            """, unsafe_allow_html=True)
 
-    with col_mat_r:
-        # Phase Breakdown for Batters
-        phase_df = filtered_df[filtered_df["is_high_pressure_bat"]].groupby("phase").agg(
-            runs=("runs_batter", "sum"),
-            balls=("is_ball_faced_batter", "sum"),
-            boundaries=("is_boundary", "sum")
-        ).reset_index()
-        phase_df["strike_rate"] = (phase_df["runs"] / phase_df["balls"]) * 100.0
-        phase_df["boundary_pct"] = (phase_df["boundaries"] / phase_df["balls"]) * 100.0
+        with col_mat_r:
+            # Phase Breakdown for Batters
+            phase_df = filtered_df[filtered_df["is_high_pressure_bat"]].groupby("phase").agg(
+                runs=("runs_batter", "sum"),
+                balls=("is_ball_faced_batter", "sum"),
+                boundaries=("is_boundary", "sum")
+            ).reset_index()
+            phase_df["strike_rate"] = (phase_df["runs"] / np.maximum(1, phase_df["balls"])) * 100.0
+            phase_df["boundary_pct"] = (phase_df["boundaries"] / np.maximum(1, phase_df["balls"])) * 100.0
 
-        fig_phase = px.bar(
-            phase_df,
-            x="phase",
-            y="strike_rate",
-            color="phase",
-            color_discrete_map={"Death": RR_PINK, "Middle": RR_ELECTRIC, "Powerplay": RR_BLUE, "Super Over": RR_GOLD},
-            title="High-Pressure Strike Rate by Match Phase"
-        )
-        fig_phase.update_layout(xaxis_title="Match Phase", yaxis_title="High-Pressure Strike Rate", showlegend=False)
-        st.plotly_chart(apply_rr_theme(fig_phase), use_container_width=True)
+            fig_phase = px.bar(
+                phase_df,
+                x="phase",
+                y="strike_rate",
+                color="phase",
+                color_discrete_map={"Death": RR_PINK, "Middle": RR_ELECTRIC, "Powerplay": RR_BLUE, "Super Over": RR_GOLD},
+                title="High-Pressure Strike Rate by Match Phase"
+            )
+            fig_phase.update_layout(xaxis_title="Match Phase", yaxis_title="High-Pressure Strike Rate", showlegend=False)
+            st.plotly_chart(apply_rr_theme(fig_phase), use_container_width=True)
+            
+    with subtab_comp:
+        col_c_left, col_c_right = st.columns(2)
+        with col_c_left:
+            # Compare top 4 or focused player + top 3 across phases
+            top_p_list = eligible_batters.head(4)["player_name"].tolist()
+            if focus_p and focus_p not in top_p_list:
+                top_p_list = [focus_p] + top_p_list[:3]
+            fig_phase_grouped = plot_phase_comparison_grouped(filtered_df, top_p_list, is_batter=True)
+            st.plotly_chart(fig_phase_grouped, use_container_width=True)
+            
+        with col_c_right:
+            fig_box = plot_metric_distribution_box(
+                eligible_batters,
+                metric_col="hp_strike_rate",
+                title="Cohort High-Pressure Strike Rate Consistency Spread",
+                is_batter=True
+            )
+            st.plotly_chart(fig_box, use_container_width=True)
 
 with tab3:
     st.markdown("#### 👤 Individual Batter Evidence Dossier")

@@ -15,14 +15,16 @@ from src.ui_helpers import (
     inject_custom_css, load_core_data, render_sidebar_filters, filter_deliveries, get_computed_rankings
 )
 from src.visualizations import (
-    apply_rr_theme, RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY,
+    apply_rr_theme, plot_role_distribution, RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY,
     RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN, GRID_COLOR
 )
 from src.pbi_overview_helpers import (
     build_pbi_leaderboard_chart, build_pbi_scatter_chart, build_pbi_heatmap_chart,
     build_pbi_comp_comparison_chart, build_pbi_distribution_chart, build_pbi_season_trends_chart,
-    build_player_spotlight_card_html
+    build_player_spotlight_card_html, generate_executive_insights
 )
+from src.auction_intelligence import generate_all_auction_assets
+from pathlib import Path
 
 st.set_page_config(
     page_title="Executive Overview | SupeRR SCOUT",
@@ -324,6 +326,22 @@ with kpi4:
     </div>
     """, unsafe_allow_html=True)
 
+# ==================== DYNAMIC EXECUTIVE INSIGHTS PANEL ====================
+exec_insights = generate_executive_insights(active_ranked, is_batter, filtered_df)
+if exec_insights:
+    insights_html = "<br/>".join([f"• {ins}" for ins in exec_insights])
+    st.markdown(f"""
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-left: 4px solid {'#E6007E' if is_batter else '#287BFF'}; 
+                border-radius: 10px; padding: 14px 20px; margin-top: 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(8,13,32,0.6);">
+        <div style="font-size: 13px; font-weight: 800; color: #F7F8FC; margin-bottom: 6px; letter-spacing: 0.5px;">
+            🧠 EVIDENCE-BASED EXECUTIVE INTELLIGENCE
+        </div>
+        <div style="font-size: 12px; color: #A8B3CC; line-height: 1.6;">
+            {insights_html}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # ==================== ACTIVE PLAYER SPOTLIGHT (IF CROSS-FILTERED) ====================
 if focus_player:
@@ -409,11 +427,19 @@ st.markdown("<br/>", unsafe_allow_html=True)
 col_r3_left, col_r3_right = st.columns(2)
 
 with col_r3_left:
-    fig_dist = build_pbi_distribution_chart(
-        filtered_df,
-        is_batter=is_batter
-    )
-    st.plotly_chart(fig_dist, use_container_width=True)
+    tab_dist_phase, tab_dist_role = st.tabs(["⏱️ Match Phase Breakdown", "🎯 Tactical Role Breakdown"])
+    with tab_dist_phase:
+        fig_dist = build_pbi_distribution_chart(
+            filtered_df,
+            is_batter=is_batter
+        )
+        st.plotly_chart(fig_dist, use_container_width=True)
+    with tab_dist_role:
+        assets = generate_all_auction_assets(deliveries_df, Path("assets"))
+        dossier_data = assets["dossier"]
+        cat_dossier = dossier_data[dossier_data["category"] == ("Batter" if is_batter else "Bowler")]
+        fig_roles = plot_role_distribution(cat_dossier if not cat_dossier.empty else dossier_data)
+        st.plotly_chart(fig_roles, use_container_width=True)
 
 with col_r3_right:
     fig_trend = build_pbi_season_trends_chart(

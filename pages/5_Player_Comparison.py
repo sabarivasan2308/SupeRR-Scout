@@ -14,9 +14,10 @@ from src.ui_helpers import (
     inject_custom_css, load_core_data, render_sidebar_filters, filter_deliveries, get_computed_rankings
 )
 from src.visualizations import (
-    plot_player_radar, apply_rr_theme,
-    RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY, RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN
+    plot_player_radar, plot_phase_comparison_grouped, apply_rr_theme,
+    RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY, RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN, RR_CYAN
 )
+from src.player_profiles import build_batter_evidence_card, build_bowler_evidence_card
 
 st.set_page_config(page_title="Player Comparison | SupeRR SCOUT", page_icon="⚖️", layout="wide")
 inject_custom_css()
@@ -199,33 +200,51 @@ else:
         st.markdown("#### 🕸️ 5-Component Normalized Radar Arena")
         st.caption("Normalized on 0–100 percentile scales across the qualified tournament cohort.")
         st.plotly_chart(plot_player_radar(compare_df, is_batter=is_batter), use_container_width=True)
+        st.markdown("""
+        <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #A8B3CC;">
+            <b style="color: #F7F8FC;">Radar Normalization Note:</b> Axes are min-max percentile scaled to [0, 100] across the cohort purely for visual shape comparison. Absolute un-normalized statistics are preserved in the table below.
+        </div>
+        """, unsafe_allow_html=True)
 
     with col_bar:
-        st.markdown(f"#### 📊 Direct Metric Comparison ({ 'Strike Rate & Average' if is_batter else 'Economy & Strike Rate'})")
+        st.markdown("#### 📊 Direct Metric Comparison")
         if is_batter:
-            metric_comp = compare_df[["player_name", "hp_strike_rate", "hp_average", "sr_delta"]].copy()
-            fig_cmp = px.bar(
-                metric_comp,
-                x="player_name",
-                y=["hp_strike_rate", "hp_average"],
-                barmode="group",
-                color_discrete_sequence=[RR_PINK, RR_ELECTRIC],
-                labels={"value": "Performance Value", "variable": "Metric", "player_name": "Player"}
-            )
-            fig_cmp.update_layout(height=420)
-            st.plotly_chart(apply_rr_theme(fig_cmp), use_container_width=True)
+            metric_options = ["hp_strike_rate", "hp_average", "hp_boundary_pct", "sr_delta", "consistency_score"]
+            metric_labels = {"hp_strike_rate": "HP Strike Rate", "hp_average": "HP Average", "hp_boundary_pct": "Boundary %", "sr_delta": "Clutch Delta (Δ SR)", "consistency_score": "Consistency Score"}
+            default_metrics = ["hp_strike_rate", "hp_average"]
         else:
-            metric_comp = compare_df[["player_name", "hp_economy", "hp_strike_rate"]].copy()
-            fig_cmp = px.bar(
-                metric_comp,
-                x="player_name",
-                y=["hp_economy", "hp_strike_rate"],
-                barmode="group",
-                color_discrete_sequence=[RR_ELECTRIC, RR_GOLD],
-                labels={"value": "Performance Value", "variable": "Metric", "player_name": "Player"}
-            )
-            fig_cmp.update_layout(height=420)
-            st.plotly_chart(apply_rr_theme(fig_cmp), use_container_width=True)
+            metric_options = ["hp_economy", "hp_strike_rate", "hp_wickets", "hp_dot_pct", "econ_delta", "consistency_score"]
+            metric_labels = {"hp_economy": "HP Economy (RPO)", "hp_strike_rate": "Bowling SR", "hp_wickets": "HP Wickets", "hp_dot_pct": "Dot Ball %", "econ_delta": "Clutch Delta (Δ Econ)", "consistency_score": "Consistency Score"}
+            default_metrics = ["hp_economy", "hp_strike_rate"]
+            
+        chosen_metrics = st.multiselect(
+            "Select Metrics to Plot:",
+            options=metric_options,
+            default=default_metrics,
+            format_func=lambda x: metric_labels.get(x, x),
+            key="comp_metrics_choice"
+        )
+        if not chosen_metrics:
+            chosen_metrics = default_metrics
+            
+        metric_comp = compare_df[["player_name"] + chosen_metrics].copy()
+        fig_cmp = px.bar(
+            metric_comp,
+            x="player_name",
+            y=chosen_metrics,
+            barmode="group",
+            color_discrete_sequence=[RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, RR_CYAN],
+            labels={"value": "Performance Value", "variable": "Metric", "player_name": "Player"}
+        )
+        fig_cmp.update_layout(height=420)
+        st.plotly_chart(apply_rr_theme(fig_cmp), use_container_width=True)
+
+    st.markdown("<br/>", unsafe_allow_html=True)
+    
+    # ==================== PHASE-BY-PHASE BREAKDOWN ====================
+    st.markdown("#### ⏱️ Phase-Wise Execution Comparison (Powerplay, Middle, Death)")
+    fig_phases = plot_phase_comparison_grouped(filtered_df, selected_players, is_batter=is_batter)
+    st.plotly_chart(fig_phases, use_container_width=True)
 
     # ==================== 5. KEY METRICS & UNCERTAINTY COMPARISON TABLE ====================
     st.markdown("#### 📋 Detailed Metrics & Confidence Interval Overlap")
@@ -260,3 +279,16 @@ else:
         file_name=f"{'Batter' if is_batter else 'Bowler'}_Comparison_Matrix.csv",
         mime="text/csv"
     )
+
+    # ==================== 6. PLAYER PROFILE CARDS EXPANDER ====================
+    with st.expander(f"👤 View Individual Profile Dossiers for Selected { 'Batters' if is_batter else 'Bowlers'}"):
+        for p in selected_players:
+            p_sub = compare_df[compare_df["player_name"] == p]
+            if not p_sub.empty:
+                row = p_sub.iloc[0]
+                card = build_batter_evidence_card(row) if is_batter else build_bowler_evidence_card(row)
+                st.markdown(f"**{p} (Rank #{card['rank']} — Score {card['reliability_score']:.1f})**")
+                st.markdown(f"• **Role:** {card['role']} | **Confidence:** {card['confidence_rating']} ({card['confidence_interval']})")
+                st.markdown(f"• **Scouting Rationale:** {card['scouting_rationale']}")
+                st.markdown(f"• **Limitations:** {card['potential_limitations']}")
+                st.markdown("---")

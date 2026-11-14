@@ -26,8 +26,12 @@ from src.auction_intelligence import (
 )
 from src.visualizations import (
     plot_ipl_vs_combined_scores, plot_phase_allocation_stacked,
-    plot_single_player_split, apply_rr_theme,
+    plot_single_player_split, plot_squad_budget_chart, apply_rr_theme,
     RR_PINK, RR_BLUE, RR_ELECTRIC, RR_NAVY, RR_CARD_BG, RR_WHITE, RR_MUTED, RR_GOLD, RR_GREEN
+)
+from src.squad_planner import (
+    compute_squad_financials, analyze_squad_balance, compare_saved_scenarios,
+    DEFAULT_PURSE_INR_CR, MAX_OVERSEAS_PLAYERS
 )
 from src.report_generator import build_auction_pdf_report
 
@@ -63,6 +67,17 @@ if "auc_tier" not in st.session_state:
     st.session_state["auc_tier"] = "All Tiers"
 if "auc_focus_player" not in st.session_state:
     st.session_state["auc_focus_player"] = None
+if "squad_bids" not in st.session_state:
+    st.session_state["squad_bids"] = {
+        "Rinku Singh": 14.0, "David Miller": 11.5, "Sunil Narine": 16.0,
+        "Rashid Khan": 18.0, "Tim David": 9.5, "Arshdeep Singh": 12.0
+    }
+if "squad_scenarios" not in st.session_state:
+    st.session_state["squad_scenarios"] = {}
+if "selected_draft_players" not in st.session_state:
+    st.session_state["selected_draft_players"] = [
+        "Rinku Singh", "David Miller", "Sunil Narine", "Rashid Khan", "Tim David", "Arshdeep Singh"
+    ]
 
 def handle_clear_auc_focus():
     st.session_state["auc_focus_player"] = None
@@ -257,7 +272,8 @@ if focus_p:
 
 
 # ==================== 4. MAIN AUCTION WAR ROOM TABS ====================
-tab_matrix, tab_splits, tab_roles, tab_uncert, tab_dossiers, tab_export = st.tabs([
+tab_planner, tab_matrix, tab_splits, tab_roles, tab_uncert, tab_dossiers, tab_export = st.tabs([
+    "💰 Squad Planner & Budget Simulator",
     "🏆 IPL-Only vs Combined Matrix",
     "⚖️ Competition Disaggregation (IPL vs T20I)",
     "🎯 Roles & Phase Fingerprint",
@@ -265,6 +281,184 @@ tab_matrix, tab_splits, tab_roles, tab_uncert, tab_dossiers, tab_export = st.tab
     "📁 Comprehensive Scouting Dossiers",
     "📥 Export Center (CSV & PDF)"
 ])
+
+# ==================== TAB 0: SQUAD PLANNER & BUDGET SIMULATOR ====================
+with tab_planner:
+    st.markdown("### 💰 Rajasthan Royals IPL 2027 Squad Planner & Budget Simulator")
+    st.caption("Draft hypothetical squad combinations, assign simulated acquisition bids, track purse allocation, and test role-balance constraints.")
+    
+    col_p_purse, col_p_draft = st.columns([1.2, 2.8])
+    with col_p_purse:
+        total_purse_val = st.number_input(
+            "Total Franchise Purse (₹ Cr):",
+            min_value=50.0,
+            max_value=200.0,
+            value=float(DEFAULT_PURSE_INR_CR),
+            step=5.0,
+            key="input_total_purse"
+        )
+        
+    all_candidate_names = dossier_df["player_name"].tolist()
+    valid_draft_defaults = [p for p in st.session_state["selected_draft_players"] if p in all_candidate_names]
+    
+    with col_p_draft:
+        drafted_players = st.multiselect(
+            "Draft Players into Hypothetical RR Squad:",
+            options=all_candidate_names,
+            default=valid_draft_defaults,
+            key="ms_draft_players"
+        )
+        st.session_state["selected_draft_players"] = drafted_players
+
+    # Build active squad roster data
+    squad_roster = []
+    if drafted_players:
+        for p in drafted_players:
+            p_match = dossier_df[dossier_df["player_name"] == p]
+            if not p_match.empty:
+                p_info = p_match.iloc[0]
+                default_bid = st.session_state["squad_bids"].get(p, 5.0)
+                squad_roster.append({
+                    "player_name": p,
+                    "player_id": int(p_info["player_id"]),
+                    "category": p_info["category"],
+                    "role": p_info["primary_role"],
+                    "reliability_score": float(p_info["comb_score"]),
+                    "ipl_score": float(p_info["ipl_score"]) if pd.notna(p_info["ipl_score"]) else None,
+                    "target_tier": p_info["target_tier"],
+                    "is_overseas": bool("Overseas" in p_info.get("nationality", "") or p in ["David Miller", "Tim David", "Sunil Narine", "Rashid Khan", "Haris Rauf", "Heinrich Klaasen", "Nicholas Pooran"]),
+                    "bid_cr": float(default_bid)
+                })
+
+    # Compute Financials & Balance
+    fin = compute_squad_financials(squad_roster, total_purse_val)
+    bal = analyze_squad_balance(squad_roster)
+
+    # 4 Dynamic Financial KPI Cards
+    st.markdown("<br/>", unsafe_allow_html=True)
+    pk1, pk2, pk3, pk4 = st.columns(4)
+    with pk1:
+        st.markdown(f"""
+        <div class="rr-kpi-card" style="border-top: 3px solid #E6007E;">
+            <div class="rr-kpi-title">Total Purse Spent</div>
+            <div class="rr-kpi-value" style="color: #E6007E;">₹{fin['total_spent']:.2f} <span style="font-size:14px; color:#A8B3CC;">Cr</span></div>
+            <div class="rr-kpi-sub-pink">Utilization: {fin['utilization_pct']:.1f}%</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with pk2:
+        rem_color = RR_GREEN if fin['remaining_purse'] >= 0 else "#FF0055"
+        st.markdown(f"""
+        <div class="rr-kpi-card" style="border-top: 3px solid {rem_color};">
+            <div class="rr-kpi-title">Remaining Purse</div>
+            <div class="rr-kpi-value" style="color: {rem_color};">₹{fin['remaining_purse']:.2f} <span style="font-size:14px; color:#A8B3CC;">Cr</span></div>
+            <div class="rr-kpi-sub">Available for Remaining Slots</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with pk3:
+        st.markdown(f"""
+        <div class="rr-kpi-card" style="border-top: 3px solid #287BFF;">
+            <div class="rr-kpi-title">Drafted Squad Size</div>
+            <div class="rr-kpi-value" style="color: #287BFF;">{fin['squad_count']} <span style="font-size:14px; color:#A8B3CC;">Players</span></div>
+            <div class="rr-kpi-sub-blue">Overseas: {bal['overseas_count']} / {MAX_OVERSEAS_PLAYERS}</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with pk4:
+        st.markdown(f"""
+        <div class="rr-kpi-card" style="border-top: 3px solid #F39C12;">
+            <div class="rr-kpi-title">Squad Average Reliability</div>
+            <div class="rr-kpi-value" style="color: #F39C12;">{bal['avg_reliability']:.1f}<span style="font-size:14px; color:#A8B3CC;">/100</span></div>
+            <div class="rr-kpi-sub">Avg Player Cost: ₹{fin['avg_player_cost']:.2f} Cr</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # Roster Management Table with Editable Simulated Bids
+    if squad_roster:
+        st.markdown("<br/>", unsafe_allow_html=True)
+        col_s_table, col_s_donut = st.columns([1.2, 0.8])
+        
+        with col_s_table:
+            st.markdown("#### 📋 Drafted Squad Roster & Simulated Bids")
+            st.caption("Adjust hypothetical acquisition cost per player to evaluate purse constraints.")
+            
+            for idx, p in enumerate(squad_roster):
+                c_name, c_role, c_score, c_bid = st.columns([1.5, 1.2, 1.0, 1.3])
+                with c_name:
+                    st.markdown(f"**{p['player_name']}** {'✈️' if p['is_overseas'] else '🇮🇳'}")
+                with c_role:
+                    st.caption(f"{p['role']}")
+                with c_score:
+                    st.markdown(f"`{p['reliability_score']:.1f}/100`")
+                with c_bid:
+                    new_bid = st.number_input(
+                        f"Bid (₹ Cr) - {p['player_name']}",
+                        min_value=0.20,
+                        max_value=30.0,
+                        value=float(p['bid_cr']),
+                        step=0.25,
+                        key=f"bid_input_{p['player_name']}",
+                        label_visibility="collapsed"
+                    )
+                    st.session_state["squad_bids"][p['player_name']] = new_bid
+                    p['bid_cr'] = new_bid
+                    
+        with col_s_donut:
+            st.plotly_chart(plot_squad_budget_chart(squad_roster, total_purse_val), use_container_width=True)
+            
+            # Squad Balance Alerts
+            st.markdown("##### 🛡️ Tactical Squad Balance Checks")
+            for alert in bal["alerts"]:
+                st.markdown(f"<div style='font-size:12px; color:#A8B3CC; margin-bottom:4px;'>{alert}</div>", unsafe_allow_html=True)
+
+    # Multi-Scenario Management in Session State
+    st.markdown("<br/>", unsafe_allow_html=True)
+    st.markdown("#### 💾 Multi-Scenario Strategy Comparison")
+    st.caption("Save multiple hypothetical squad configurations to compare purse allocations and role balances.")
+    
+    col_sc_name, col_sc_btn, col_sc_clr = st.columns([2.0, 1.0, 1.0])
+    with col_sc_name:
+        scenario_name_input = st.text_input("New Scenario Name:", placeholder="e.g. Plan A - Batting Firepower Core", key="txt_scenario_name")
+    with col_sc_btn:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("💾 Save Scenario", key="btn_save_scenario", use_container_width=True):
+            if scenario_name_input.strip() and squad_roster:
+                st.session_state["squad_scenarios"][scenario_name_input.strip()] = {
+                    "players": [dict(p) for p in squad_roster],
+                    "total_purse": total_purse_val
+                }
+                st.success(f"Saved scenario '{scenario_name_input.strip()}'!")
+                st.rerun()
+            elif not squad_roster:
+                st.warning("Cannot save empty squad.")
+            else:
+                st.warning("Please enter a scenario name.")
+    with col_sc_clr:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("🗑️ Clear Scenarios", key="btn_clear_scenarios", use_container_width=True):
+            st.session_state["squad_scenarios"] = {}
+            st.rerun()
+
+    # Display Scenario Comparison Table if scenarios exist
+    if st.session_state["squad_scenarios"]:
+        cmp_df = compare_saved_scenarios(st.session_state["squad_scenarios"], total_purse_val)
+        st.dataframe(cmp_df, use_container_width=True, hide_index=True)
+        
+        cmp_csv = cmp_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📥 Export Scenario Comparison (CSV)",
+            data=cmp_csv,
+            file_name="RR_Squad_Scenario_Comparison.csv",
+            mime="text/csv"
+        )
+        
+    st.markdown("""
+    <div style="background: #0E162B; border: 1px solid #1D2B52; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #A8B3CC; margin-top: 14px;">
+        <b style="color: #F7F8FC;">Valuation Guardrail:</b> All acquisition costs and bid numbers entered into the simulator are user-configured hypothetical planning values. Actual player auction values vary based on dynamic franchise purse distributions.
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # ==================== TAB 1: IPL-ONLY VS COMBINED MATRIX ====================
 with tab_matrix:

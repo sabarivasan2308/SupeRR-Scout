@@ -640,3 +640,64 @@ def build_player_spotlight_card_html(player_row: pd.Series, is_batter: bool = Tr
         </div>
     </div>
     """
+
+
+def generate_executive_insights(
+    active_ranked: pd.DataFrame,
+    is_batter: bool,
+    filtered_df: pd.DataFrame
+) -> List[str]:
+    """
+    Generate evidence-based executive insights directly from verified computed metrics.
+    Never invents unverified claims or fake win probabilities.
+    """
+    insights = []
+    eligible = active_ranked[active_ranked.get("is_eligible", True)] if "is_eligible" in active_ranked.columns else active_ranked
+    if eligible.empty:
+        eligible = active_ranked
+        
+    if not eligible.empty:
+        top_player = eligible.iloc[0]
+        p_name = top_player["player_name"]
+        score = top_player["reliability_score"]
+        
+        if is_batter:
+            sr = top_player.get("hp_strike_rate", 0.0)
+            avg = top_player.get("hp_average", 0.0)
+            balls = top_player.get("hp_balls", 0)
+            insights.append(
+                f"<b>#1 Pressure Batter:</b> <b>{p_name}</b> leads the qualified cohort with a Bayesian Reliability Score of <b>{score:.1f}/100</b>, maintaining a high-pressure Strike Rate of <b>{sr:.1f}</b> across <b>{int(balls)}</b> deliveries."
+            )
+            # Find best clutch delta
+            if "sr_delta" in eligible.columns:
+                best_delta = eligible.sort_values("sr_delta", ascending=False).iloc[0]
+                insights.append(
+                    f"<b>Clutch Elevation Leader:</b> <b>{best_delta['player_name']}</b> exhibits the highest positive gear-shift under pressure (<b>{best_delta['sr_delta']:+.1f} SR delta</b> relative to normal conditions)."
+                )
+        else:
+            econ = top_player.get("hp_economy", 0.0)
+            wkts = top_player.get("hp_wickets", 0)
+            balls = top_player.get("hp_legal_balls", 0)
+            insights.append(
+                f"<b>#1 Pressure Bowler:</b> <b>{p_name}</b> leads the qualified cohort with a Bayesian Reliability Score of <b>{score:.1f}/100</b>, conceding just <b>{econ:.2f} RPO</b> with <b>{int(wkts)}</b> wickets across <b>{int(balls)}</b> legal balls."
+            )
+            if "econ_delta" in eligible.columns:
+                best_delta = eligible.sort_values("econ_delta", ascending=True).iloc[0]
+                insights.append(
+                    f"<b>Economy Strangulation Leader:</b> <b>{best_delta['player_name']}</b> shows the greatest economy improvement under pressure (<b>{best_delta['econ_delta']:+.2f} RPO delta</b>)."
+                )
+
+    # Phase leverage insight
+    pressure_col = "is_high_pressure_bat" if is_batter else "is_high_pressure_bowl"
+    if pressure_col in filtered_df.columns:
+        hp_df = filtered_df[filtered_df[pressure_col]]
+        total_hp = len(hp_df)
+        if total_hp > 0 and "phase" in hp_df.columns:
+            death_hp = len(hp_df[hp_df["phase"] == "Death"])
+            death_pct = (death_hp / total_hp) * 100.0
+            insights.append(
+                f"<b>Phase Concentration:</b> <b>{death_pct:.1f}%</b> of all high-pressure deliveries in this slice occur during Death overs (17–20), highlighting the tactical importance of death-overs specialists."
+            )
+            
+    return insights
+

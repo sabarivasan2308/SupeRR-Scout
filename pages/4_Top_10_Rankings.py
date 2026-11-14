@@ -223,8 +223,9 @@ if focus_p:
 
 
 # ==================== 4. MAIN LEADERBOARD TABS ====================
-tab_lead, tab_dossiers, tab_unstop = st.tabs([
+tab_lead, tab_compare, tab_dossiers, tab_unstop = st.tabs([
     f"🏆 Top 10 { 'Batters' if is_batter else 'Bowlers'} Leaderboard",
+    "⚔️ Top 10 Head-to-Head Duel",
     "📁 Individual Evidence Dossiers",
     "📋 Unstop Official Submission Table"
 ])
@@ -232,6 +233,39 @@ tab_lead, tab_dossiers, tab_unstop = st.tabs([
 with tab_lead:
     st.markdown(f"#### Top 10 { 'Batters' if is_batter else 'Bowlers'} ({st.session_state['top10_scope']})")
     st.caption("Click any bar on the chart to spotlight that player across the war room.")
+    
+    # Search and Sort Controls
+    col_ctrl_search, col_ctrl_sort = st.columns([1.5, 2.5])
+    with col_ctrl_search:
+        search_query = st.text_input("🔍 Filter by Player Name:", placeholder="Type to filter...", key="top10_search_box")
+    with col_ctrl_sort:
+        sort_choice = st.selectbox(
+            "Sort Table By:",
+            options=["Reliability Score (Official Rank)", "High-Pressure Deliveries", "HP Strike Rate / Economy", "Clutch Delta"],
+            key="top10_sort_choice"
+        )
+        
+    filtered_display_df = active_df.copy()
+    if search_query.strip():
+        filtered_display_df = filtered_display_df[
+            filtered_display_df["player_name"].str.contains(search_query.strip(), case=False, na=False)
+        ]
+        
+    if "Deliveries" in sort_choice:
+        sort_c = "hp_balls" if is_batter else "hp_legal_balls"
+        filtered_display_df = filtered_display_df.sort_values(sort_c, ascending=False)
+    elif "Strike Rate" in sort_choice:
+        if is_batter:
+            filtered_display_df = filtered_display_df.sort_values("hp_strike_rate", ascending=False)
+        else:
+            filtered_display_df = filtered_display_df.sort_values("hp_economy", ascending=True)
+    elif "Clutch Delta" in sort_choice:
+        if is_batter:
+            filtered_display_df = filtered_display_df.sort_values("sr_delta", ascending=False)
+        else:
+            filtered_display_df = filtered_display_df.sort_values("econ_delta", ascending=True)
+    else:
+        filtered_display_df = filtered_display_df.sort_values("rank", ascending=True)
     
     col_chart, col_tbl = st.columns([1.1, 0.9])
     
@@ -248,27 +282,96 @@ with tab_lead:
     with col_tbl:
         st.markdown("##### Detailed Metric Table")
         if is_batter:
-            bat_disp = active_df[[
+            bat_disp = filtered_display_df[[
                 "rank", "player_name", "player_id", "reliability_score", "hp_balls",
                 "hp_strike_rate", "hp_average", "sr_delta", "confidence_interval"
             ]].copy()
             bat_disp.columns = ["Rank", "Player", "ID", "Score", "HP Balls", "HP SR", "HP Avg", "Δ SR", "95% CI"]
             st.dataframe(bat_disp, use_container_width=True, hide_index=True)
         else:
-            bowl_disp = active_df[[
+            bowl_disp = filtered_display_df[[
                 "rank", "player_name", "player_id", "reliability_score", "hp_legal_balls", "hp_overs",
                 "hp_wickets", "hp_economy", "econ_delta", "confidence_interval"
             ]].copy()
             bowl_disp.columns = ["Rank", "Player", "ID", "Score", "HP Balls", "Overs", "Wkts", "HP Econ", "Δ Econ", "95% CI"]
             st.dataframe(bowl_disp, use_container_width=True, hide_index=True)
 
-        csv_bytes = active_df.to_csv(index=False).encode("utf-8")
+        csv_bytes = filtered_display_df.to_csv(index=False).encode("utf-8")
         st.download_button(
-            f"📥 Download Top 10 { 'Batters' if is_batter else 'Bowlers'} CSV",
+            f"📥 Download Displayed { 'Batters' if is_batter else 'Bowlers'} CSV",
             data=csv_bytes,
             file_name=f"Top_10_{'Batters' if is_batter else 'Bowlers'}_{st.session_state['top10_scope'].replace(' ', '_')}.csv",
             mime="text/csv"
         )
+        
+    # Ranking Explanation Callout
+    if not active_df.empty:
+        top_hero = active_df.iloc[0]
+        n_opp = top_hero["hp_balls"] if is_batter else top_hero["hp_legal_balls"]
+        w_cred = (n_opp / (n_opp + 50.0)) * 100.0
+        with st.expander(f"ℹ️ Why is {top_hero['player_name']} Ranked #1? (Mathematical Derivation Breakdown)"):
+            st.markdown(f"""
+            <div style="font-size: 13px; line-height: 1.6; color: #A8B3CC;">
+                <b style="color: #F7F8FC;">1. Sample Volume & Bayesian Credibility:</b><br/>
+                With <b>{int(n_opp)}</b> high-pressure balls, {top_hero['player_name']} receives a data credibility weight of <b>{w_cred:.1f}%</b> under the Empirical Bayes model (<code>w = n / (n + 50)</code>).<br/><br/>
+                <b style="color: #F7F8FC;">2. High-Pressure Realization:</b><br/>
+                Under extreme match leverage (P ≥ 65.0), {top_hero['player_name']} records 
+                {'a Strike Rate of <b>' + str(round(top_hero['hp_strike_rate'], 1)) + '</b> and Average of <b>' + str(round(top_hero['hp_average'], 1)) + '</b>' if is_batter else 'an Economy of <b>' + str(round(top_hero['hp_economy'], 2)) + ' RPO</b> with <b>' + str(int(top_hero['hp_wickets'])) + '</b> wickets'}.<br/><br/>
+                <b style="color: #F7F8FC;">3. Clutch Elevation Factor:</b><br/>
+                {top_hero['player_name']} elevates performance under pressure with a clutch delta of 
+                <b style="color: #2ECC71;">{f'{top_hero.get(\"sr_delta\", 0):+.1f} SR' if is_batter else f'{top_hero.get(\"econ_delta\", 0):+.2f} Econ'}</b> relative to standard conditions.<br/><br/>
+                <b style="color: #F7F8FC;">4. Uncertainty Regularization:</b><br/>
+                The 95% Confidence Interval is compact at <code>{top_hero.get('confidence_interval', 'N/A')}</code>, verifying statistical stability.
+            </div>
+            """, unsafe_allow_html=True)
+
+with tab_compare:
+    st.markdown("#### ⚔️ Top 10 Head-to-Head Comparison")
+    st.caption("Select any two players from the Top 10 to inspect side-by-side metric differentials.")
+    
+    p_names_list = active_df["player_name"].tolist()
+    if len(p_names_list) >= 2:
+        col_c_p1, col_c_p2 = st.columns(2)
+        with col_c_p1:
+            p1 = st.selectbox("Select Player 1:", options=p_names_list, index=0, key="duel_p1")
+        with col_c_p2:
+            p2 = st.selectbox("Select Player 2:", options=p_names_list, index=1, key="duel_p2")
+            
+        row_p1 = active_df[active_df["player_name"] == p1].iloc[0]
+        row_p2 = active_df[active_df["player_name"] == p2].iloc[0]
+        
+        col_card1, col_card2 = st.columns(2)
+        with col_card1:
+            st.markdown(f"""
+            <div class="rr-card" style="border-top: 3px solid {RR_PINK if is_batter else RR_ELECTRIC}; padding: 18px;">
+                <div style="font-size: 11px; color: #A8B3CC;">RANK #{row_p1['rank']}</div>
+                <div style="font-size: 20px; font-weight: 800; color: #F7F8FC;">{p1}</div>
+                <div style="font-size: 26px; font-weight: 900; color: {RR_PINK if is_batter else RR_ELECTRIC}; margin-top: 4px;">
+                    {row_p1['reliability_score']:.1f}<span style="font-size: 13px; color: #A8B3CC;">/100</span>
+                </div>
+                <div style="font-size: 12px; color: #A8B3CC; margin-top: 8px;">
+                    {'HP SR: <b>' + str(round(row_p1['hp_strike_rate'], 1)) + '</b> | HP Avg: <b>' + str(round(row_p1['hp_average'], 1)) + '</b>' if is_batter else 'HP Econ: <b>' + str(round(row_p1['hp_economy'], 2)) + '</b> | Wkts: <b>' + str(int(row_p1['hp_wickets'])) + '</b>'}<br/>
+                    HP Deliveries: <b>{int(row_p1['hp_balls'] if is_batter else row_p1['hp_legal_balls'])}</b><br/>
+                    Clutch Delta: <b>{row_p1.get('sr_delta', 0):+.1f} SR</b>{' (Elevated)' if row_p1.get('sr_delta', 0) > 0 else '' if is_batter else f'{row_p1.get(\"econ_delta\", 0):+.2f} Econ'}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+        with col_card2:
+            st.markdown(f"""
+            <div class="rr-card" style="border-top: 3px solid {RR_GOLD}; padding: 18px;">
+                <div style="font-size: 11px; color: #A8B3CC;">RANK #{row_p2['rank']}</div>
+                <div style="font-size: 20px; font-weight: 800; color: #F7F8FC;">{p2}</div>
+                <div style="font-size: 26px; font-weight: 900; color: {RR_GOLD}; margin-top: 4px;">
+                    {row_p2['reliability_score']:.1f}<span style="font-size: 13px; color: #A8B3CC;">/100</span>
+                </div>
+                <div style="font-size: 12px; color: #A8B3CC; margin-top: 8px;">
+                    {'HP SR: <b>' + str(round(row_p2['hp_strike_rate'], 1)) + '</b> | HP Avg: <b>' + str(round(row_p2['hp_average'], 1)) + '</b>' if is_batter else 'HP Econ: <b>' + str(round(row_p2['hp_economy'], 2)) + '</b> | Wkts: <b>' + str(int(row_p2['hp_wickets'])) + '</b>'}<br/>
+                    HP Deliveries: <b>{int(row_p2['hp_balls'] if is_batter else row_p2['hp_legal_balls'])}</b><br/>
+                    Clutch Delta: <b>{row_p2.get('sr_delta', 0):+.1f} SR</b>{' (Elevated)' if row_p2.get('sr_delta', 0) > 0 else '' if is_batter else f'{row_p2.get(\"econ_delta\", 0):+.2f} Econ'}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
 with tab_dossiers:
     st.markdown(f"#### 🔍 Official Scouting Dossiers ({ 'Batters' if is_batter else 'Bowlers'})")
