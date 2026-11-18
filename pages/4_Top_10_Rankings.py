@@ -448,14 +448,15 @@ with tab_unstop:
     unstop_df = generate_unstop_submission_table(top_10_batters, top_10_bowlers)
     st.dataframe(unstop_df, use_container_width=True, hide_index=True)
 
-    col_u1, col_u2 = st.columns(2)
+    col_u1, col_u2, col_u3 = st.columns(3)
     with col_u1:
         unstop_csv = unstop_df.to_csv(index=False).encode("utf-8")
         st.download_button(
-            "📥 Download Official Unstop Submission (CSV)",
+            "📥 Unstop Submission (CSV)",
             data=unstop_csv,
             file_name="SupeRR_Scout_Top10_Submission.csv",
-            mime="text/csv"
+            mime="text/csv",
+            use_container_width=True
         )
     with col_u2:
         pdf_path = Path("assets/SupeRR_Scout_Official_Unstop_Report.pdf")
@@ -465,8 +466,21 @@ with tab_unstop:
             with open(pdf_path, "rb") as f:
                 pdf_bytes = f.read()
             st.download_button(
-                "📄 Download Official Unstop Methodology Report (PDF)",
+                "📄 Unstop Report (PDF)",
                 data=pdf_bytes,
                 file_name="SupeRR_Scout_Official_Unstop_Report.pdf",
-                mime="application/pdf"
+                mime="application/pdf",
+                use_container_width=True
+            )
+    with col_u3:
+        analytics_pdf_path = Path("assets/SupeRR_Scout_Data_Analytics_Report.pdf")
+        if analytics_pdf_path.exists():
+            with open(analytics_pdf_path, "rb") as f:
+                analytics_pdf_bytes = f.read()
+            st.download_button(
+                "📊 Analytics Whitepaper (PDF)",
+                data=analytics_pdf_bytes,
+                file_name="SupeRR_Scout_Data_Analytics_Report.pdf",
+                mime="application/pdf",
+                use_container_width=True
             )
