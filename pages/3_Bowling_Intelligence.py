@@ -92,7 +92,7 @@ st.markdown(f"""
 # ==================== 2. PERSISTENT POWER BI SLICER PANEL ====================
 with st.container():
     st.markdown("""
-    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #287BFF; 
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #287BFF;
                 border-radius: 12px 12px 0 0; padding: 12px 20px; margin-bottom: 0;">
         <div style="font-size: 13px; font-weight: 800; color: #F7F8FC; letter-spacing: 0.8px;">
             🎛️ BOWLING COHORT SLICERS & DRILLDOWN
@@ -257,7 +257,7 @@ with tab1:
             options=["Reliability Score", "HP Economy (Lowest to Highest)", "HP Wickets (Highest to Lowest)", "Dot Ball %", "Clutch Delta (Δ Econ)", "HP Balls Bowled"],
             key="sel_bowl_sort_metric"
         )
-    
+
     sort_col_map = {
         "Reliability Score": ("reliability_score", False),
         "HP Economy (Lowest to Highest)": ("hp_economy", True),
@@ -270,7 +270,7 @@ with tab1:
     sorted_bowlers = eligible_bowlers.sort_values(col_to_sort, ascending=asc).reset_index(drop=True)
 
     c_chart, c_tbl = st.columns([1.1, 0.9])
-    
+
     with c_chart:
         fig_bar = build_pbi_leaderboard_chart(eligible_bowlers, is_batter=False, selected_player=focus_p, top_n=10)
         chart_event = st.plotly_chart(fig_bar, on_select="rerun", selection_mode="points", key="bowl_lead_chart", use_container_width=True)
@@ -292,7 +292,7 @@ with tab1:
         tbl_disp.drop(columns=["ci_lower", "ci_upper"], inplace=True)
         tbl_disp.columns = ["Rank", "Player", "Score", "HP Balls", "Overs", "Wkts", "HP Econ", "Strike Rate", "Dot %", "Δ Econ", "95% CI"]
         st.dataframe(tbl_disp, use_container_width=True, hide_index=True)
-        
+
         csv_data = sorted_bowlers.to_csv(index=False).encode("utf-8")
         st.download_button(
             "📥 Export Bowling Leaderboard (CSV)",
@@ -303,15 +303,15 @@ with tab1:
 
 with tab2:
     st.markdown("#### 🎯 Containment, Pressure Heatmap & Phase Spread")
-    
+
     subtab_mat, subtab_comp = st.tabs(["📊 Containment Matrix & Heatmap", "⏱️ Bowler Phase Comparison & Economy Spread"])
-    
+
     with subtab_mat:
         col_mat_l, col_mat_r = st.columns(2)
         with col_mat_l:
             fig_scatter = plot_bowling_scatter(bowl_ranked, min_balls=min_opps)
             st.plotly_chart(fig_scatter, use_container_width=True)
-            
+
             st.markdown("""
             <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; font-size: 12px; color: #A8B3CC;">
                 <b style="color: #F7F8FC;">Matrix Quadrant Guide:</b><br/>
@@ -339,7 +339,7 @@ with tab2:
                 top_p_list = [focus_p] + top_p_list[:3]
             fig_phase_grouped = plot_phase_comparison_grouped(filtered_df, top_p_list, is_batter=False)
             st.plotly_chart(fig_phase_grouped, use_container_width=True)
-            
+
         with col_c_right:
             fig_box = plot_metric_distribution_box(
                 eligible_bowlers,
@@ -351,16 +351,16 @@ with tab2:
 
 with tab3:
     st.markdown("#### 👤 Individual Bowler Evidence Dossier")
-    
+
     if player_names:
         default_idx = player_names.index(focus_p) if focus_p in player_names else 0
         sel_dossier_p = st.selectbox("Select Bowler for Profile Breakdown:", options=player_names, index=default_idx)
-        
+
         if sel_dossier_p:
             p_row = eligible_bowlers[eligible_bowlers["player_name"] == sel_dossier_p].iloc[0]
             p_id = int(p_row["player_id"])
             card = build_bowler_evidence_card(p_row)
-            
+
             c_left, c_right = st.columns([1.1, 0.9])
             with c_left:
                 st.markdown(f"""
@@ -375,18 +375,18 @@ with tab3:
                             <div style="font-size: 10px; font-weight: 700; letter-spacing: 0.8px; color: #A8B3CC;">RELIABILITY SCORE</div>
                         </div>
                     </div>
-                    
+
                     <div style="margin-bottom: 14px;">
                         <span class="rr-badge rr-badge-blue">Strongest: {card['strongest_metric']}</span>
                         <span class="rr-badge rr-badge-pink">Confidence: {card['confidence_rating']} ({card['confidence_interval']})</span>
                         <span class="rr-badge rr-badge-gold">Consistency: {card['consistency']}</span>
                     </div>
-                    
+
                     <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #1D2B52;">
                         <div style="font-size: 11px; font-weight: 700; color: #287BFF; text-transform: uppercase; letter-spacing: 0.5px;">Scouting Rationale</div>
                         <div style="font-size: 12px; color: #F7F8FC; margin-top: 4px; line-height: 1.5;">{card['scouting_rationale']}</div>
                     </div>
-                    
+
                     <div style="margin-top: 12px; padding-top: 10px; border-top: 1px solid #1D2B52;">
                         <div style="font-size: 11px; font-weight: 700; color: #F39C12; text-transform: uppercase; letter-spacing: 0.5px;">Analytical Limitations / Watchpoints</div>
                         <div style="font-size: 12px; color: #A8B3CC; margin-top: 4px; line-height: 1.4;">{card['potential_limitations']}</div>

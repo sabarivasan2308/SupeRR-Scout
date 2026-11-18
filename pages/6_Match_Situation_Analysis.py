@@ -109,7 +109,7 @@ tab_sim, tab_hist = st.tabs([
 with tab_sim:
     st.markdown("### 🏏 Live Cricket Match Scenario Simulator")
     st.caption("Adjust match parameters to simulate real-time leverage, calculate exact RRR/CRR demand, and match against 200,999 historical delivery records.")
-    
+
     # Simulator Input Controls
     st.markdown("""
     <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #E6007E; border-radius: 12px 12px 0 0; padding: 12px 20px; margin-bottom: 0;">
@@ -118,7 +118,7 @@ with tab_sim:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     with st.container():
         c_in1, c_in2, c_in3, c_in4, c_in5 = st.columns([1.3, 1.1, 1.1, 1.3, 1.2])
         with c_in1:
@@ -137,7 +137,7 @@ with tab_sim:
             overs_comp = st.slider("Overs Completed", min_value=0.0, max_value=20.0, value=15.0, step=0.1, key="sim_overs")
         with c_in5:
             wickets_down = st.slider("Wickets Lost", min_value=0, max_value=10, value=4, key="sim_wickets")
-            
+
     # Compute Scenario Metrics
     scen = compute_cricket_scenario(
         overs_completed=overs_comp,
@@ -147,9 +147,9 @@ with tab_sim:
         overs_limit=20.0,
         is_batting_perspective=is_batting_view
     )
-    
+
     st.markdown("<br/>", unsafe_allow_html=True)
-    
+
     # Real-Time Computed Scenario KPIs
     sk1, sk2, sk3, sk4 = st.columns(4)
     with sk1:
@@ -160,7 +160,7 @@ with tab_sim:
             <div class="rr-kpi-sub-blue">{scen['balls_remaining']} Balls Left ({scen['overs_remaining']:.1f} Overs)</div>
         </div>
         """, unsafe_allow_html=True)
-        
+
     with sk2:
         st.markdown(f"""
         <div class="rr-kpi-card" style="border-top: 3px solid #E6007E;">
@@ -169,7 +169,7 @@ with tab_sim:
             <div class="rr-kpi-sub-pink">Current Pace (CRR): {scen['crr']:.2f} RPO</div>
         </div>
         """, unsafe_allow_html=True)
-        
+
     with sk3:
         st.markdown(f"""
         <div class="rr-kpi-card" style="border-top: 3px solid #F39C12;">
@@ -178,7 +178,7 @@ with tab_sim:
             <div class="rr-kpi-sub">{scen['wickets_lost']} Wickets Lost ({scen['phase']} Phase)</div>
         </div>
         """, unsafe_allow_html=True)
-        
+
     with sk4:
         st.markdown(f"""
         <div class="rr-kpi-card" style="border-top: 3px solid {scen['category_color']};">
@@ -190,24 +190,24 @@ with tab_sim:
 
     # Tactical Narrative
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, rgba(23,70,162,0.20) 0%, rgba(230,0,126,0.15) 100%); 
+    <div style="background: linear-gradient(135deg, rgba(23,70,162,0.20) 0%, rgba(230,0,126,0.15) 100%);
                 border: 1px solid rgba(40,123,255,0.40); border-left: 5px solid {scen['category_color']};
                 border-radius: 10px; padding: 14px 18px; margin-top: 14px; margin-bottom: 20px;">
         <b style="color: #F7F8FC;">Tactical Scenario Assessment:</b> {scen['tactical_summary']}
     </div>
     """, unsafe_allow_html=True)
-    
+
     # Historical Cohort Matching
     st.markdown("#### 🔍 Historical Delivery Evidence Matching")
     st.caption("Scanning the empirical archive for historical balls delivered under comparable pressure conditions.")
-    
+
     hist_match = find_historical_scenario_cohort(
         deliveries_df=filtered_df,
         target_pressure=scen['active_pressure'],
         phase=scen['phase'],
         is_batter=is_batting_view
     )
-    
+
     col_h1, col_h2 = st.columns([1.1, 0.9])
     with col_h1:
         st.markdown(f"""
@@ -223,7 +223,7 @@ with tab_sim:
             </div>
         </div>
         """, unsafe_allow_html=True)
-        
+
     with col_h2:
         st.markdown("""
         <div class="rr-card" style="padding: 16px 20px;">
@@ -239,7 +239,7 @@ with tab_sim:
         else:
             st.caption("No individual player has sufficient volume (>12 balls) in this exact micro-window.")
         st.markdown("</div>", unsafe_allow_html=True)
-        
+
     st.markdown("""
     <div style="background: #0E162B; border: 1px solid #1D2B52; border-radius: 8px; padding: 10px 14px; font-size: 11px; color: #A8B3CC; margin-top: 10px;">
         <b style="color: #F7F8FC;">Analytical Guardrail:</b> This scenario simulator is an empirical exploration tool based on deterministic cricket arithmetic and historical delivery records. It does not generate synthetic ML win-probabilities.
@@ -340,7 +340,7 @@ with tab_hist:
         inn_data = match_balls[match_balls["innings"] == inn]
         color = RR_PINK if inn == 2 else RR_BLUE
         team_name = inn_data['home_team'].iloc[0] if inn == 1 else inn_data['away_team'].iloc[0]
-        
+
         fig_match.add_trace(go.Scatter(
             x=list(range(1, len(inn_data) + 1)),
             y=inn_data["pressure_batting"],

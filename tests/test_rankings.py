@@ -81,7 +81,7 @@ def test_unstop_submission_format(mock_batters_ranked, mock_bowlers_ranked):
     top_bat = get_top_10_batters(mock_batters_ranked, min_balls=50)
     top_bowl = get_top_10_bowlers(mock_bowlers_ranked, min_balls=50)
     submission = generate_unstop_submission_table(top_bat, top_bowl)
-    
+
     assert len(submission) == 20
     assert set(submission["category"].unique()) == {"Batter", "Bowler"}
     assert list(submission.columns) == ["category", "rank", "player_name", "player_id", "reliability_score"]

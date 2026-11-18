@@ -108,7 +108,7 @@ st.markdown(f"""
 # ==================== 2. PERSISTENT POWER BI-STYLE FILTER PANEL ====================
 with st.container():
     st.markdown("""
-    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #1746A2; 
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #1746A2;
                 border-radius: 12px 12px 0 0; padding: 12px 20px; margin-bottom: 0;">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div style="font-size: 13px; font-weight: 800; color: #F7F8FC; letter-spacing: 0.8px;">
@@ -125,7 +125,7 @@ with st.container():
     with slicer_box:
         # Slicer Row 1: Primary Dimensions
         col_cat, col_comp, col_phase, col_seas = st.columns([1.1, 1.2, 1.2, 1.5])
-        
+
         with col_cat:
             cat_choice = st.radio(
                 "Player Role",
@@ -180,7 +180,7 @@ with st.container():
 
         # Slicer Row 2: Thresholds, Player Drill-Through & Reset
         col_thresh, col_opps, col_player, col_action = st.columns([1.3, 1.2, 1.7, 0.8])
-        
+
         with col_thresh:
             thresh_choice = st.slider(
                 "Pressure Threshold (HP Index)",
@@ -250,7 +250,7 @@ with col_player:
     current_player_idx = 0
     if st.session_state["pbi_focus_player"] in player_options:
         current_player_idx = player_options.index(st.session_state["pbi_focus_player"])
-        
+
     p_select = st.selectbox(
         "Player Spotlight Slicer",
         options=player_options,
@@ -331,7 +331,7 @@ exec_insights = generate_executive_insights(active_ranked, is_batter, filtered_d
 if exec_insights:
     insights_html = "<br/>".join([f"• {ins}" for ins in exec_insights])
     st.markdown(f"""
-    <div style="background: #111A32; border: 1px solid #1D2B52; border-left: 4px solid {'#E6007E' if is_batter else '#287BFF'}; 
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-left: 4px solid {'#E6007E' if is_batter else '#287BFF'};
                 border-radius: 10px; padding: 14px 20px; margin-top: 14px; margin-bottom: 10px; box-shadow: 0 4px 16px rgba(8,13,32,0.6);">
         <div style="font-size: 13px; font-weight: 800; color: #F7F8FC; margin-bottom: 6px; letter-spacing: 0.5px;">
             🧠 EVIDENCE-BASED EXECUTIVE INTELLIGENCE
@@ -377,7 +377,7 @@ with col_r1_left:
         key="pbi_lead_chart",
         use_container_width=True
     )
-    
+
     # Process bar chart clicks
     if lead_select and lead_select.get("selection") and lead_select["selection"].get("points"):
         clicked_pt = lead_select["selection"]["points"][0]
@@ -386,7 +386,7 @@ with col_r1_left:
             clicked_name = clicked_pt["customdata"][0]
         elif "y" in clicked_pt:
             clicked_name = clicked_pt["y"]
-            
+
         if clicked_name and clicked_name != focus_player:
             st.session_state["pbi_focus_player"] = clicked_name
             st.rerun()
@@ -462,7 +462,7 @@ with col_exp_left:
             cols_export = ["rank", "player_name", "player_id", "reliability_score", "hp_balls", "hp_runs", "hp_strike_rate", "hp_average", "sr_delta", "ci_lower", "ci_upper"]
         else:
             cols_export = ["rank", "player_name", "player_id", "reliability_score", "hp_legal_balls", "hp_overs", "hp_wickets", "hp_economy", "econ_delta", "ci_lower", "ci_upper"]
-        
+
         valid_cols = [c for c in cols_export if c in export_df.columns]
         csv_data = export_df[valid_cols].to_csv(index=False).encode("utf-8")
         st.download_button(
@@ -476,7 +476,7 @@ with col_exp_right:
     st.markdown("""
     <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 8px; padding: 12px 16px; font-size: 11px; color: #A8B3CC; line-height: 1.5;">
         <b style="color: #F7F8FC;">Analytical Integrity Guardrail:</b><br/>
-        Interactive slicers and cross-filtering enable deep exploratory analysis without modifying the official 
+        Interactive slicers and cross-filtering enable deep exploratory analysis without modifying the official
         hackathon Top 10 rankings. The official benchmark leaderboards are preserved on Page 4 and Page 8.
     </div>
     """, unsafe_allow_html=True)

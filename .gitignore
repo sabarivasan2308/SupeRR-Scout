@@ -17,7 +17,8 @@ ENV/
 
 # Challenge Datasets (Raw & Processed)
 data/raw/
-data/processed/
+data/processed/*
+!data/processed/.gitkeep
 *.pkl
 *.parquet
 

@@ -36,7 +36,7 @@ def inject_custom_css():
     <style>
         /* Import clean modern font */
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-        
+
         :root {
             --rr-pink: #E6007E;
             --rr-blue: #1746A2;
@@ -47,43 +47,43 @@ def inject_custom_css():
             --muted-text: #A8B3CC;
             --card-border: #1D2B52;
         }
-        
+
         html, body, [class*="css"], .stApp {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background-color: #080D20 !important;
             color: #F7F8FC !important;
         }
-        
+
         /* Main page container */
         .block-container {
             padding-top: 1.8rem !important;
             padding-bottom: 3rem !important;
             max-width: 1400px;
         }
-        
+
         /* Sidebar styling */
         section[data-testid="stSidebar"] {
             background-color: #0C1226 !important;
             border-right: 1px solid #1D2B52 !important;
         }
-        
+
         section[data-testid="stSidebar"] .block-container {
             padding-top: 1.5rem !important;
         }
-        
+
         /* Sidebar navigation link overrides */
         div[data-testid="stSidebarNav"] {
             padding-top: 0.5rem;
         }
-        
+
         div[data-testid="stSidebarNav"] ul {
             padding-left: 0;
         }
-        
+
         div[data-testid="stSidebarNav"] li {
             margin-bottom: 4px;
         }
-        
+
         div[data-testid="stSidebarNav"] a {
             border-radius: 8px !important;
             color: #A8B3CC !important;
@@ -91,13 +91,13 @@ def inject_custom_css():
             transition: all 0.2s ease-in-out !important;
             padding: 8px 14px !important;
         }
-        
+
         div[data-testid="stSidebarNav"] a:hover {
             background-color: #111A32 !important;
             color: #287BFF !important;
             transform: translateX(3px);
         }
-        
+
         div[data-testid="stSidebarNav"] a[aria-current="page"] {
             background: linear-gradient(90deg, rgba(230, 0, 126, 0.20) 0%, rgba(23, 70, 162, 0.25) 100%) !important;
             border-left: 3px solid #E6007E !important;
@@ -105,7 +105,7 @@ def inject_custom_css():
             font-weight: 700 !important;
             box-shadow: 0 2px 10px rgba(230, 0, 126, 0.15) !important;
         }
-        
+
         /* Custom Rajasthan Royals Header Card */
         .rr-header-card {
             background: linear-gradient(135deg, rgba(230, 0, 126, 0.16) 0%, rgba(23, 70, 162, 0.28) 100%);
@@ -118,7 +118,7 @@ def inject_custom_css():
             position: relative;
             overflow: hidden;
         }
-        
+
         .rr-header-card::before {
             content: '';
             position: absolute;
@@ -129,7 +129,7 @@ def inject_custom_css():
             background: radial-gradient(circle at top right, rgba(40, 123, 255, 0.15) 0%, transparent 70%);
             pointer-events: none;
         }
-        
+
         .rr-title {
             font-size: 26px;
             font-weight: 800;
@@ -140,14 +140,14 @@ def inject_custom_css():
             letter-spacing: -0.5px;
             line-height: 1.2;
         }
-        
+
         .rr-subtitle {
             font-size: 13px;
             color: #A8B3CC;
             font-weight: 500;
             letter-spacing: 0.3px;
         }
-        
+
         /* Metric KPI Card */
         .rr-kpi-card {
             background: #111A32;
@@ -160,13 +160,13 @@ def inject_custom_css():
             position: relative;
             overflow: hidden;
         }
-        
+
         .rr-kpi-card:hover {
             border-color: #E6007E;
             box-shadow: 0 8px 25px rgba(230, 0, 126, 0.22);
             transform: translateY(-3px);
         }
-        
+
         .rr-kpi-title {
             font-size: 11px;
             font-weight: 700;
@@ -175,35 +175,35 @@ def inject_custom_css():
             color: #A8B3CC;
             margin-bottom: 6px;
         }
-        
+
         .rr-kpi-value {
             font-size: 26px;
             font-weight: 800;
             color: #F7F8FC;
             line-height: 1.15;
         }
-        
+
         .rr-kpi-sub {
             font-size: 12px;
             color: #2ECC71;
             margin-top: 5px;
             font-weight: 500;
         }
-        
+
         .rr-kpi-sub-pink {
             font-size: 12px;
             color: #E6007E;
             margin-top: 5px;
             font-weight: 600;
         }
-        
+
         .rr-kpi-sub-blue {
             font-size: 12px;
             color: #287BFF;
             margin-top: 5px;
             font-weight: 600;
         }
-        
+
         /* Badge tags */
         .rr-badge {
             display: inline-flex;
@@ -215,33 +215,33 @@ def inject_custom_css():
             letter-spacing: 0.4px;
             margin-right: 6px;
         }
-        
+
         .rr-badge-pink {
             background: rgba(230, 0, 126, 0.16);
             color: #E6007E;
             border: 1px solid rgba(230, 0, 126, 0.45);
             box-shadow: 0 0 10px rgba(230, 0, 126, 0.20);
         }
-        
+
         .rr-badge-blue {
             background: rgba(40, 123, 255, 0.16);
             color: #287BFF;
             border: 1px solid rgba(40, 123, 255, 0.45);
             box-shadow: 0 0 10px rgba(40, 123, 255, 0.20);
         }
-        
+
         .rr-badge-gold {
             background: rgba(243, 156, 18, 0.16);
             color: #F39C12;
             border: 1px solid rgba(243, 156, 18, 0.45);
         }
-        
+
         .rr-badge-navy {
             background: rgba(23, 70, 162, 0.25);
             color: #82B1FF;
             border: 1px solid rgba(40, 123, 255, 0.35);
         }
-        
+
         /* Generic Card Container */
         .rr-card {
             background: #111A32;
@@ -251,7 +251,7 @@ def inject_custom_css():
             margin-bottom: 16px;
             box-shadow: 0 4px 18px rgba(8, 13, 32, 0.7);
         }
-        
+
         .rr-card-highlight {
             background: linear-gradient(135deg, rgba(230, 0, 126, 0.10) 0%, rgba(23, 70, 162, 0.18) 100%);
             border: 1px solid rgba(230, 0, 126, 0.30);
@@ -267,7 +267,7 @@ def inject_custom_css():
             border-bottom: 2px solid #1D2B52;
             padding-bottom: 2px;
         }
-        
+
         .stTabs [data-baseweb="tab"] {
             border-radius: 8px 8px 0 0 !important;
             color: #A8B3CC !important;
@@ -278,12 +278,12 @@ def inject_custom_css():
             border: none !important;
             transition: all 0.2s ease;
         }
-        
+
         .stTabs [data-baseweb="tab"]:hover {
             color: #287BFF !important;
             background-color: rgba(40, 123, 255, 0.08) !important;
         }
-        
+
         .stTabs [aria-selected="true"] {
             color: #E6007E !important;
             border-bottom: 3px solid #E6007E !important;
@@ -298,7 +298,7 @@ def inject_custom_css():
             background-color: #111A32 !important;
             overflow: hidden;
         }
-        
+
         /* Streamlit Expanders */
         .streamlit-expanderHeader {
             background-color: #111A32 !important;
@@ -308,17 +308,17 @@ def inject_custom_css():
             font-weight: 600 !important;
             transition: all 0.2s ease;
         }
-        
+
         .streamlit-expanderHeader:hover {
             border-color: #287BFF !important;
             color: #287BFF !important;
         }
-        
+
         [data-testid="stExpander"] {
             border: none !important;
             margin-bottom: 10px;
         }
-        
+
         [data-testid="stExpanderDetails"] {
             background-color: #0E162B !important;
             border: 1px solid #1D2B52 !important;
@@ -326,7 +326,7 @@ def inject_custom_css():
             border-radius: 0 0 10px 10px !important;
             padding: 16px 20px !important;
         }
-        
+
         /* Action & Download Buttons */
         .stButton>button {
             background: linear-gradient(135deg, #E6007E 0%, #1746A2 100%) !important;
@@ -338,13 +338,13 @@ def inject_custom_css():
             box-shadow: 0 4px 16px rgba(230, 0, 126, 0.35) !important;
             transition: all 0.25s ease !important;
         }
-        
+
         .stButton>button:hover {
             box-shadow: 0 6px 22px rgba(230, 0, 126, 0.55) !important;
             transform: translateY(-2px) !important;
             color: #FFFFFF !important;
         }
-        
+
         .stDownloadButton>button {
             background-color: #111A32 !important;
             border: 1px solid #287BFF !important;
@@ -354,7 +354,7 @@ def inject_custom_css():
             padding: 8px 18px !important;
             transition: all 0.25s ease !important;
         }
-        
+
         .stDownloadButton>button:hover {
             border-color: #E6007E !important;
             color: #E6007E !important;
@@ -367,7 +367,7 @@ def inject_custom_css():
             color: #A8B3CC !important;
             font-weight: 500 !important;
         }
-        
+
         div[role="radiogroup"] label[data-checked="true"] {
             color: #F7F8FC !important;
             font-weight: 700 !important;
@@ -387,14 +387,14 @@ def load_core_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Load or build the preprocessed deliveries and matches datasets."""
     deliveries = load_processed_dataset("deliveries_processed.pkl")
     matches = load_processed_dataset("matches_processed.pkl")
-    
+
     if deliveries is None or matches is None:
         raw = load_all_raw_data()
         matches = preprocess_matches(raw["matches"], raw["competitions"])
         deliveries = reconstruct_deliveries(raw["ball_by_ball"], matches)
         deliveries = add_match_context_signals(deliveries)
         deliveries = apply_pressure_indices(deliveries, threshold=65.0)
-        
+
     return deliveries, matches
 
 
@@ -416,9 +416,9 @@ def render_sidebar_filters(
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
+
     st.sidebar.markdown("### 🎛️ Global Filters")
-    
+
     # Season Filter
     available_seasons = sorted(matches_df["season"].dropna().unique().tolist())
     selected_seasons = st.sidebar.multiselect(
@@ -429,7 +429,7 @@ def render_sidebar_filters(
     )
     if not selected_seasons:
         selected_seasons = available_seasons
-        
+
     # Competition Filter
     comp_options = ["All Competitions", "IPL Only", "T20I Only"]
     selected_comp_type = st.sidebar.radio(
@@ -438,7 +438,7 @@ def render_sidebar_filters(
         index=0,
         help="Filter exclusively for IPL franchise games or international T20I fixtures."
     )
-    
+
     # Team Filter
     all_teams = sorted(list(set(matches_df["home_team"].dropna()).union(set(matches_df["away_team"].dropna()))))
     selected_team = st.sidebar.selectbox(
@@ -447,10 +447,10 @@ def render_sidebar_filters(
         index=0,
         help="Optionally filter deliveries where the selected team is batting or bowling."
     )
-    
+
     st.sidebar.markdown("---")
     st.sidebar.markdown("### ⚙️ Analytical Assumptions")
-    
+
     # Pressure Threshold Slider
     pressure_threshold = st.sidebar.slider(
         "High-Pressure Threshold",
@@ -460,7 +460,7 @@ def render_sidebar_filters(
         step=5.0,
         help="Delivery pressure index boundary (default: 65.0). Deliveries with pressure ≥ threshold are classified as high pressure."
     )
-    
+
     # Minimum Opportunities Slider
     min_opportunities = st.sidebar.slider(
         "Min Pressure Opportunities",
@@ -470,7 +470,7 @@ def render_sidebar_filters(
         step=10,
         help="Minimum balls faced (batters) or legal balls bowled (bowlers) under pressure to be eligible for ranking."
     )
-    
+
     st.sidebar.markdown("---")
     st.sidebar.markdown("""
     <div style='background: #111A32; border: 1px solid #1D2B52; border-radius: 8px; padding: 12px; font-size: 11px; color: #A8B3CC; line-height: 1.4;'>
@@ -479,7 +479,7 @@ def render_sidebar_filters(
         <span style='color: #287BFF;'>Confidential War Room Platform</span>
     </div>
     """, unsafe_allow_html=True)
-    
+
     return {
         "seasons": selected_seasons,
         "comp_type": selected_comp_type,
@@ -495,26 +495,26 @@ def filter_deliveries(
 ) -> pd.DataFrame:
     """Apply sidebar filter selections to the reconstructed deliveries DataFrame."""
     df = deliveries_df.copy()
-    
+
     # Filter seasons
     if filters["seasons"]:
         df = df[df["season"].isin(filters["seasons"])]
-        
+
     # Filter competition
     if filters["comp_type"] == "IPL Only":
         df = df[df["is_ipl"]]
     elif filters["comp_type"] == "T20I Only":
         df = df[df["match_format"] == "T20I"]
-        
+
     # Filter team
     if filters["team"] != "All Teams":
         df = df[(df["home_team"] == filters["team"]) | (df["away_team"] == filters["team"])]
-        
+
     # Re-apply threshold if modified from default 65.0
     thresh = filters["pressure_threshold"]
     df["is_high_pressure_bat"] = df["pressure_batting"] >= thresh
     df["is_high_pressure_bowl"] = df["pressure_bowling"] >= thresh
-    
+
     return df
 
 
@@ -529,10 +529,10 @@ def get_computed_rankings(
     bat_metrics = compute_batting_metrics(filtered_df, min_balls_hp=min_opps)
     bat_ranked = apply_batting_reliability_model(bat_metrics)
     top_10_batters = get_top_10_batters(bat_ranked, min_balls=min_opps)
-    
+
     # Bowling
     bowl_metrics = compute_bowling_metrics(filtered_df, min_balls_hp=min_opps)
     bowl_ranked = apply_bowling_reliability_model(bowl_metrics)
     top_10_bowlers = get_top_10_bowlers(bowl_ranked, min_balls=min_opps)
-    
+
     return bat_ranked, top_10_batters, bowl_ranked, top_10_bowlers

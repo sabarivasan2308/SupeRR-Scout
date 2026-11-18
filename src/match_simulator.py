@@ -19,7 +19,7 @@ def compute_cricket_scenario(
 ) -> Dict[str, Any]:
     """
     Calculate strictly-valid cricket situation metrics and pressure index.
-    
+
     Validations:
     - wickets_lost clamped to [0, 10]
     - overs_completed clamped to [0.0, overs_limit]
@@ -28,34 +28,34 @@ def compute_cricket_scenario(
     # Safe clamping
     w_lost = int(np.clip(wickets_lost, 0, 10))
     overs_limit_val = float(max(1.0, overs_limit))
-    
+
     # Extract completed overs and fractional balls
     o_comp = float(np.clip(overs_completed, 0.0, overs_limit_val))
     full_overs = int(o_comp)
     balls_in_over = int(round((o_comp - full_overs) * 10))
     if balls_in_over >= 6:
         balls_in_over = 5  # Clamp invalid over decimals (e.g. .6 -> .5)
-    
+
     balls_completed = full_overs * 6 + balls_in_over
     total_balls = int(round(overs_limit_val * 6))
     balls_remaining = max(0, total_balls - balls_completed)
     overs_remaining = balls_remaining / 6.0
-    
+
     c_score = max(0, int(current_score))
     t_score = max(0, int(target_score))
-    
+
     runs_needed = max(0, t_score - c_score)
     wickets_in_hand = max(0, 10 - w_lost)
-    
+
     # Current Run Rate (CRR)
     crr = (c_score / (balls_completed / 6.0)) if balls_completed > 0 else 0.0
-    
+
     # Required Run Rate (RRR)
     if balls_remaining <= 0:
         rrr = 0.0 if runs_needed == 0 else 99.0
     else:
         rrr = runs_needed / overs_remaining
-        
+
     # Phase Classification
     if balls_completed < 36:
         phase = "Powerplay"
@@ -63,7 +63,7 @@ def compute_cricket_scenario(
         phase = "Middle"
     else:
         phase = "Death"
-        
+
     # Pressure Index Calculation (using the exact formula from methodology and pressure engine)
     # 1. R_demand
     if rrr <= 4.0:
@@ -76,30 +76,43 @@ def compute_cricket_scenario(
         r_demand = 90.0 + (rrr - 14.0) * (10.0 / 4.0)
     else:
         r_demand = 100.0
-        
+
     # 2. W_lost urgency
     w_urgency = min(100.0, ((w_lost / 9.0) ** 1.15) * 100.0) if w_lost > 0 else 0.0
-    
+
     # 3. S_stage
     s_stage = min(100.0, (balls_completed / max(1, total_balls)) * 100.0)
-    
+
     # 4. L_closeness
     if balls_remaining > 0:
         closeness_ratio = (runs_needed / max(1, balls_remaining)) * 6.0
         l_closeness = np.clip(closeness_ratio * 7.5, 0.0, 100.0)
     else:
         l_closeness = 100.0 if runs_needed > 0 else 0.0
-        
+
     # Composite Batting Pressure
     raw_pressure_bat = 0.40 * r_demand + 0.25 * w_urgency + 0.20 * s_stage + 0.15 * l_closeness
     pressure_bat = float(np.clip(raw_pressure_bat, 0.0, 100.0))
-    
-    # Bowling Pressure (slightly distinct weight on containment and wicket value)
-    raw_pressure_bowl = 0.35 * r_demand + 0.30 * (100.0 - w_urgency) + 0.20 * s_stage + 0.15 * l_closeness
+
+    # Bowling Pressure (strictly harmonized with src/pressure_engine.py chase formulation)
+    if rrr > 18.0:
+        rrr_stress = float(np.clip(30.0 - (rrr - 18.0) * 2.0, 5.0, 30.0))
+    elif rrr >= 12.0:
+        rrr_stress = float(np.clip(70.0 - (rrr - 12.0) * 6.5, 30.0, 70.0))
+    elif rrr >= 6.0:
+        rrr_stress = float(np.clip(70.0 + (12.0 - rrr) * 3.0, 70.0, 95.0))
+    else:
+        rrr_stress = float(np.clip(90.0 - (6.0 - rrr) * 10.0, 40.0, 90.0))
+
+    stage_stress = float(np.clip((total_balls - balls_remaining) / max(1, total_balls) * 100.0, 10.0, 100.0))
+    w_threat = float(np.clip((wickets_in_hand / 10.0) * 80.0 + 10.0, 10.0, 100.0))
+    margin_stress = float(np.clip(100.0 - (runs_needed / max(1, balls_remaining) - 1.0) * 10.0, 20.0, 100.0)) if balls_remaining <= 36 else 40.0
+
+    raw_pressure_bowl = 0.35 * rrr_stress + 0.25 * stage_stress + 0.20 * w_threat + 0.20 * margin_stress
     pressure_bowl = float(np.clip(raw_pressure_bowl, 0.0, 100.0))
-    
+
     active_pressure = pressure_bat if is_batting_perspective else pressure_bowl
-    
+
     # Band Classification
     if active_pressure < 50.0:
         pressure_category = "Low (<50)"
@@ -116,9 +129,9 @@ def compute_cricket_scenario(
     else:
         pressure_category = "Extreme (85+)"
         category_color = "#FF0055"  # Electric Pink
-        
+
     is_high_pressure = active_pressure >= 65.0
-    
+
     # Tactical situation narrative
     if w_lost >= 10:
         tactical_summary = "All out. Innings terminated."
@@ -194,19 +207,19 @@ def find_historical_scenario_cohort(
 
     p_min = max(0.0, target_pressure - tolerance)
     p_max = min(100.0, target_pressure + tolerance)
-    
+
     # Slice matching phase and pressure window
     matched = deliveries_df[
         (deliveries_df[pressure_col] >= p_min) &
         (deliveries_df[pressure_col] <= p_max)
     ]
-    
+
     # Try phase match first; if small sample, fallback to pressure band overall
     if phase and "phase" in matched.columns:
         phase_matched = matched[matched["phase"] == phase]
         if len(phase_matched) >= 30:
             matched = phase_matched
-            
+
     sample_size = len(matched)
     if sample_size == 0:
         return {
@@ -217,7 +230,7 @@ def find_historical_scenario_cohort(
             "wicket_pct": 0.0,
             "top_performers": []
         }
-        
+
     if is_batter:
         runs = matched["runs_batter"].sum()
         balls = matched["is_ball_faced_batter"].sum()
@@ -225,11 +238,11 @@ def find_historical_scenario_cohort(
         boundaries = matched["is_boundary"].sum()
         dots = matched["is_batter_dot"].sum()
         wickets = matched["is_wicket"].sum()
-        
+
         boundary_pct = (boundaries / max(1, balls)) * 100.0
         dot_pct = (dots / max(1, balls)) * 100.0
         wicket_pct = (wickets / max(1, balls)) * 100.0
-        
+
         # Top 3 batters with min 15 balls in this state
         player_agg = matched.groupby("striker_name").agg(
             runs=("runs_batter", "sum"),
@@ -248,11 +261,11 @@ def find_historical_scenario_cohort(
         boundaries = matched["is_boundary"].sum()
         dots = matched["is_bowler_dot"].sum()
         wickets = matched["is_bowler_wicket"].sum()
-        
+
         boundary_pct = (boundaries / max(1, balls)) * 100.0
         dot_pct = (dots / max(1, balls)) * 100.0
         wicket_pct = (wickets / max(1, balls)) * 100.0
-        
+
         # Top 3 bowlers with min 12 legal balls in this state
         player_agg = matched.groupby("bowler_name").agg(
             runs=("runs_bowler", "sum"),

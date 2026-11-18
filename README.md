@@ -58,21 +58,28 @@ SupeRR-Scout/
 ├── methodology.md                     # Mathematical formulations & scientific derivations
 ├── .gitignore                         # Strict exclusion rules for datasets and artifacts
 │
+├── data/                              # Maintainable metadata & configuration
+│   └── ipl_2027_player_status.json    # Verified franchise retention, contract & auction registry
+│
 ├── src/                               # Modular analytics core
 │   ├── __init__.py
 │   ├── auction_intelligence.py        # Auction tiering, role fingerprints & venue fit
 │   ├── batting_analysis.py            # High-pressure batting metrics & boundary conversion
 │   ├── bowling_analysis.py            # Legal ball tracking, economy under leverage & dot %
+│   ├── data_dictionary.py             # Analytical metric definitions & war room glossary
 │   ├── data_loader.py                 # File loading & processed cache management
 │   ├── data_validation.py             # Schema & relational constraint tests
-│   ├── match_context.py               # Chase state reconstruction & par benchmarks
+│   ├── match_context.py               # Chase state reconstruction & venue par benchmarks
+│   ├── match_simulator.py             # Live match leverage scenario builder & simulation
 │   ├── pbi_overview_helpers.py        # Power BI components (leaderboards, scatter, heatmaps)
+│   ├── player_availability.py         # IPL 2027 player availability registry & filtering
 │   ├── player_profiles.py             # Evidence card generators & scouting rationales
 │   ├── preprocessing.py               # Legal ball, overs & match reconstruction
 │   ├── pressure_engine.py             # 0-100 continuous Pressure Intelligence Engine
 │   ├── rankings.py                    # Leaderboards & standardized export formatters
 │   ├── reliability_model.py           # Empirical Bayes shrinkage & 95% confidence intervals
 │   ├── report_generator.py            # Automated ReportLab PDF report builder
+│   ├── squad_planner.py               # Roster constraints, budget allocations & balance
 │   ├── ui_helpers.py                  # Streamlit CSS and global filter bindings
 │   └── visualizations.py              # Themed Plotly chart engines & palettes
 │
@@ -84,14 +91,17 @@ SupeRR-Scout/
 │   ├── 5_Player_Comparison.py         # Multi-player 5-axis radar & head-to-head metrics
 │   ├── 6_Match_Situation_Analysis.py  # Ball-by-ball leverage engine & RRR stress curves
 │   ├── 7_Methodology.py               # Mathematical formulas, derivations & transparency
-│   └── 8_Auction_Intelligence.py      # IPL 2027 Auction War Room & candidate dossiers
+│   └── 8_Auction_Intelligence.py      # IPL 2027 RR War Room & Player Availability Filtering
 │
-└── tests/                             # Comprehensive automated test suite (31 tests)
+└── tests/                             # Comprehensive automated test suite (59 tests)
     ├── test_auction_intelligence.py   # Auction rankings, competition splits & dossiers
     ├── test_batting_analysis.py       # Batting metrics, boundary % & reliability scores
     ├── test_bowling_analysis.py       # Bowling legal balls, economy & breakdown schemas
     ├── test_data_validation.py        # Schema checks & integrity tests
+    ├── test_interactive_war_room.py   # Scenario simulator, squad financials & glossary
+    ├── test_pages_apptest.py          # Streamlit AppTest verifying all 8 pages render cleanly
     ├── test_pbi_overview.py           # Power BI charts, scatter & pre-ranked handling
+    ├── test_player_availability.py    # Player availability filtering & RR squad constraints
     ├── test_pressure_engine.py        # Boundary [0, 100] & monotonicity tests
     └── test_rankings.py               # Ranking uniqueness & standardized export tests
 ```
@@ -148,7 +158,7 @@ http://localhost:8501
 5. **Player Comparison (`pages/5_Player_Comparison.py`):** Multi-player 5-axis radar overlays comparing volume, boundary conversion, dot-ball resistance, clutch delta, and composite reliability score.
 6. **Match Situation Analysis (`pages/6_Match_Situation_Analysis.py`):** Ball-by-ball leverage curves, cumulative match pressure trajectories, and phase leverage comparisons.
 7. **Methodology & Transparency (`pages/7_Methodology.py`):** Complete mathematical formulas, Bayesian shrinkage simulations, prior parameter settings, and scientific limitation disclosures.
-8. **Auction Intelligence (`pages/8_Auction_Intelligence.py`):** Franchise auction war room featuring shortlisted candidate dossiers, competition split comparisons, phase fingerprints, uncertainty indicators, and venue tactical fit profiles.
+8. **Auction Intelligence (`pages/8_Auction_Intelligence.py`):** IPL 2027 Rajasthan Royals Auction War Room featuring verified player availability filtering (strict exclusion of retained/contracted stars like Rinku Singh, Sunil Narine, Rashid Khan, Jasprit Bumrah, Rovman Powell, Jason Holder, Sanju Samson), tactical RR squad gap analysis (derived from confirmed 19-player roster), live purse and capacity simulation (19-player confirmed roster, 6 available slots, 3 overseas slots, ₹27.05 Cr remaining purse), 10-franchise retention explorer (17-Nov-2026 deadline), verified available rankings, SMS Jaipur venue baselines (Par 8.4 RPO), excluded/unverified audit governance, and downloadable executive dossiers.
 
 ---
 
@@ -187,12 +197,15 @@ The project includes an automated test suite covering all modules:
 python -m pytest tests/ -v
 ```
 
-### Verified Test Suite (31 Tests Passing)
+### Verified Test Suite (61 Tests Passing)
 - `tests/test_auction_intelligence.py` (8 tests): Auction rankings, competition splits, role classification, uncertainty profiles, and dossier generation.
 - `tests/test_batting_analysis.py` (2 tests): High-pressure strike rates, averages, and boundary conversion.
 - `tests/test_bowling_analysis.py` (3 tests): Legal deliveries, economy rates, wickets, and breakdown table schemas.
 - `tests/test_data_validation.py` (4 tests): Schema constraints, data types, and relational integrity.
+- `tests/test_interactive_war_room.py` (9 tests): Real-time match leverage simulator, squad planner financial modeling, and data glossary validation.
+- `tests/test_pages_apptest.py` (9 tests): Headless Streamlit AppTest verification ensuring all 8 dashboard pages and `app.py` compile and execute without exceptions.
 - `tests/test_pbi_overview.py` (8 tests): Interactive visualizations, scatter charts, heatmaps, and pre-ranked leaderboard handling.
+- `tests/test_player_availability.py` (12 tests): Official 17-Nov-2026 status registry, strict exclusion of retained/contracted/ineligible/withdrawn players, strict rejection of released players with unverified auction registration, RR squad constraints (19 players, 6 available slots, 3 overseas slots, ₹27.05 Cr remaining purse), priority shortlist verification, and 10-franchise audit.
 - `tests/test_pressure_engine.py` (3 tests): Boundedness ($[0, 100]$), monotonicity, and pressure tagging.
 - `tests/test_rankings.py` (3 tests): Uniqueness, minimum opportunity thresholds, and standardized output formatting.
 

@@ -23,7 +23,7 @@ def build_batter_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
     dot_pct = row.get("hp_dot_pct", 0.0)
     matches = int(row.get("hp_matches", 0))
     ci = f"[{row['ci_lower']:.1f} - {row['ci_upper']:.1f}]" if "ci_lower" in row else str(row.get("confidence_interval", ""))
-    
+
     # Identify strongest metric
     if sr >= 185.0:
         strongest = f"Hyper-Clutch Strike Rate ({sr:.1f})"
@@ -35,7 +35,7 @@ def build_batter_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
         strongest = f"Massive Gear Shift (+{sr_delta:.1f} SR above baseline)"
     else:
         strongest = f"Reliable Composure ({score:.1f} Score)"
-        
+
     # Tactical Scouting Rationale
     rationale = (
         f"{name} ranks #{rank} in pressure reliability with a score of {score:.1f}. "
@@ -45,7 +45,7 @@ def build_batter_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
         f"{'+' if sr_delta >= 0 else ''}{sr_delta:.1f} compared to low-pressure situations, hitting boundaries on "
         f"{boundary_pct:.1f}% of balls faced with a low dot-ball rate of {dot_pct:.1f}%."
     )
-    
+
     # Risk and Limitations
     limitations = []
     if balls < 120:
@@ -56,9 +56,9 @@ def build_batter_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
         limitations.append("Strike rate shows a slight dip under pressure relative to free-flowing baseline.")
     if not limitations:
         limitations.append("No major analytical flaws detected; robust performance across both chase and first-innings pressure.")
-        
+
     limitation_text = " ".join(limitations)
-    
+
     return {
         "player_name": name,
         "player_id": int(row["player_id"]),
@@ -101,7 +101,7 @@ def build_bowler_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
     econ_delta = row.get("econ_delta", 0.0)
     matches = int(row.get("hp_matches", 0))
     ci = f"[{row['ci_lower']:.1f} - {row['ci_upper']:.1f}]" if "ci_lower" in row else str(row.get("confidence_interval", ""))
-    
+
     if econ <= 7.0:
         strongest = f"Suffocating Economy ({econ:.2f} RPO)"
     elif wkts >= 30:
@@ -114,7 +114,7 @@ def build_bowler_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
         strongest = f"Clutch Tightening (+{econ_delta:.2f} econ improvement)"
     else:
         strongest = f"Clutch Composure ({score:.1f} Score)"
-        
+
     bnd_pct = row.get('hp_boundary_pct', 0.0)
     rationale = (
         f"{name} ranks #{rank} in bowling pressure reliability with a rating of {score:.1f}. "
@@ -123,7 +123,7 @@ def build_bowler_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
         f"Under maximum match tension, {name} delivers {dot_pct:.1f}% dot balls and concedes boundaries on only "
         f"{bnd_pct:.1f}% of balls, showing a composure delta of {econ_delta:+.2f} RPO relative to normal overs."
     )
-    
+
     limitations = []
     if balls < 120:
         limitations.append(f"Sample size is developing ({balls} balls / {overs:.1f} overs); caution in generalizing without broader baseline.")
@@ -133,9 +133,9 @@ def build_bowler_evidence_card(row: pd.Series, splits: Optional[Dict[str, pd.Dat
         limitations.append(f"Economy expands by {abs(econ_delta):.2f} RPO under intense death/chase pressure.")
     if not limitations:
         limitations.append("Exceptional dual threat: delivers both boundary suppression and crucial breakthroughs under fire.")
-        
+
     limitation_text = " ".join(limitations)
-    
+
     return {
         "player_name": name,
         "player_id": int(row["player_id"]),

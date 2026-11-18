@@ -41,26 +41,26 @@ def compute_auction_rankings(
     deliv_comb = deliveries_df.copy()
     deliv_comb["is_high_pressure_bat"] = deliv_comb["pressure_batting"] >= pressure_thresh
     deliv_comb["is_high_pressure_bowl"] = deliv_comb["pressure_bowling"] >= pressure_thresh
-    
+
     bat_m_comb = compute_batting_metrics(deliv_comb, min_balls_hp=min_balls)
     bat_r_comb = apply_batting_reliability_model(bat_m_comb)
     top_bat_comb = get_top_10_batters(bat_r_comb, min_balls=min_balls)
-    
+
     bowl_m_comb = compute_bowling_metrics(deliv_comb, min_balls_hp=min_balls)
     bowl_r_comb = apply_bowling_reliability_model(bowl_m_comb)
     top_bowl_comb = get_top_10_bowlers(bowl_r_comb, min_balls=min_balls)
-    
+
     # 2. IPL Only
     deliv_ipl = deliv_comb[deliv_comb["is_ipl"]].copy()
-    
+
     bat_m_ipl = compute_batting_metrics(deliv_ipl, min_balls_hp=min_balls)
     bat_r_ipl = apply_batting_reliability_model(bat_m_ipl)
     top_bat_ipl = get_top_10_batters(bat_r_ipl, min_balls=min_balls)
-    
+
     bowl_m_ipl = compute_bowling_metrics(deliv_ipl, min_balls_hp=min_balls)
     bowl_r_ipl = apply_bowling_reliability_model(bowl_m_ipl)
     top_bowl_ipl = get_top_10_bowlers(bowl_r_ipl, min_balls=min_balls)
-    
+
     return {
         "batters_combined": top_bat_comb,
         "batters_ipl": top_bat_ipl,
@@ -97,7 +97,7 @@ def compute_player_competition_split(
     for comp_label, comp_filter in [
         ("Combined", None),
         ("IPL", df["is_ipl"]),
-        ("T20I", ~df["is_ipl"])
+        ("International & Emerging T20", ~df["is_ipl"])
     ]:
         if comp_filter is not None:
             hp_sub = df[hp_mask & comp_filter]
@@ -107,31 +107,31 @@ def compute_player_competition_split(
             hp_sub = df[hp_mask]
             norm_sub = df[norm_mask]
             dis_sub = df[(df["dismissed_player_id"] == player_id) & (df["pressure_batting"] >= pressure_thresh)]
-        
+
         matches = hp_sub["match_id"].nunique()
-        
+
         if is_batter:
             hp_balls = len(hp_sub)
             hp_runs = int(hp_sub["runs_batter"].sum()) if hp_balls > 0 else 0
             hp_sr = (hp_runs / hp_balls * 100.0) if hp_balls > 0 else 0.0
-            
+
             # Dismissals
             hp_dismissals = dis_sub["match_id"].count()
             hp_avg = (hp_runs / max(1, hp_dismissals)) if hp_balls > 0 else 0.0
-            
+
             # Boundaries & Dots
             fours = int((hp_sub["runs_batter"] == 4).sum())
             sixes = int((hp_sub["runs_batter"] == 6).sum())
             dots = int(hp_sub["is_batter_dot"].sum()) if "is_batter_dot" in hp_sub.columns else 0
             bnd_pct = ((fours + sixes) / hp_balls * 100.0) if hp_balls > 0 else 0.0
             dot_pct = (dots / hp_balls * 100.0) if hp_balls > 0 else 0.0
-            
+
             # Normal baseline
             norm_balls = len(norm_sub)
             norm_runs = int(norm_sub["runs_batter"].sum()) if norm_balls > 0 else 0
             norm_sr = (norm_runs / norm_balls * 100.0) if norm_balls > 0 else 0.0
             sr_delta = hp_sr - norm_sr if (hp_balls > 0 and norm_balls > 0) else 0.0
-            
+
             splits[comp_label] = {
                 "matches": matches,
                 "hp_balls": hp_balls,
@@ -152,19 +152,19 @@ def compute_player_competition_split(
             hp_wkts = int(hp_sub["is_bowler_wicket"].sum()) if "is_bowler_wicket" in hp_sub.columns else 0
             hp_econ = (hp_runs_conc / hp_legal * 6.0) if hp_legal > 0 else 0.0
             hp_bowl_sr = (hp_legal / max(1, hp_wkts)) if hp_wkts > 0 else float("nan")
-            
+
             # Dots & Boundaries conceded
             dots = int(hp_sub["is_bowler_dot"].sum()) if "is_bowler_dot" in hp_sub.columns else 0
             dot_pct = (dots / hp_legal * 100.0) if hp_legal > 0 else 0.0
             bnd_conc = int(((hp_sub["runs_bowler"] >= 4) & (hp_sub["runs_bowler"] <= 6)).sum())
             bnd_pct = (bnd_conc / hp_legal * 100.0) if hp_legal > 0 else 0.0
-            
+
             # Normal baseline
             norm_legal = len(norm_sub)
             norm_runs_conc = int(norm_sub["runs_bowler"].sum()) if norm_legal > 0 else 0
             norm_econ = (norm_runs_conc / norm_legal * 6.0) if norm_legal > 0 else 0.0
             econ_delta = norm_econ - hp_econ if (hp_legal > 0 and norm_legal > 0) else 0.0
-            
+
             splits[comp_label] = {
                 "matches": matches,
                 "hp_legal_balls": hp_legal,
@@ -179,6 +179,10 @@ def compute_player_competition_split(
                 "norm_econ": round(norm_econ, 2),
                 "econ_delta": round(econ_delta, 2)
             }
+
+    # Backward compatibility alias for legacy callers and tests
+    if "International & Emerging T20" in splits:
+        splits["T20I"] = splits["International & Emerging T20"]
 
     return {
         "player_id": player_id,
@@ -202,10 +206,10 @@ def classify_player_role_and_phases(
     if is_batter:
         sub = df[(df["striker_id"] == player_id) & (df["is_ball_faced_batter"])]
         hp_sub = sub[sub["pressure_batting"] >= pressure_thresh]
-        
+
         hand = sub["batting_type"].dropna().iloc[0] if not sub["batting_type"].dropna().empty else "Unknown"
         median_order = float(sub["batting_order"].dropna().median()) if not sub["batting_order"].dropna().empty else np.nan
-        
+
         tot_hp = len(hp_sub)
         if tot_hp > 0:
             pp_b = len(hp_sub[hp_sub["phase"] == "Powerplay"])
@@ -216,7 +220,7 @@ def classify_player_role_and_phases(
             death_pct = (death_b / tot_hp) * 100.0
         else:
             pp_pct, mid_pct, death_pct = 0.0, 0.0, 0.0
-            
+
         # Role classification logic
         if death_pct >= 60.0:
             if median_order >= 7.0:
@@ -229,7 +233,7 @@ def classify_player_role_and_phases(
             primary_role = "Powerplay Enforcer & Aggressor"
         else:
             primary_role = "Multi-Phase Middle/Death Floater"
-            
+
         return {
             "player_id": player_id,
             "is_batter": True,
@@ -247,10 +251,10 @@ def classify_player_role_and_phases(
     else:
         sub = df[(df["bowler_id"] == player_id) & (df["is_legal_ball_bowler"])]
         hp_sub = sub[sub["pressure_bowling"] >= pressure_thresh]
-        
+
         bowl_style = sub["bowling_type"].dropna().iloc[0] if not sub["bowling_type"].dropna().empty else "Unknown"
         is_spin = any(w in bowl_style.lower() for w in ["spin", "break", "orthodox", "chinaman", "slow"])
-        
+
         tot_hp = len(hp_sub)
         if tot_hp > 0:
             pp_b = len(hp_sub[hp_sub["phase"] == "Powerplay"])
@@ -261,7 +265,7 @@ def classify_player_role_and_phases(
             death_pct = (death_b / tot_hp) * 100.0
         else:
             pp_pct, mid_pct, death_pct = 0.0, 0.0, 0.0
-            
+
         # Role classification logic
         if death_pct >= 65.0:
             primary_role = "Specialist Death Yorker & Boundary Suppression Enforcer"
@@ -274,7 +278,7 @@ def classify_player_role_and_phases(
             primary_role = "Powerplay Swing & Breakthrough Specialist"
         else:
             primary_role = "All-Phase High-Leverage Sentry (Middle + Death)"
-            
+
         return {
             "player_id": player_id,
             "is_batter": False,
@@ -298,7 +302,7 @@ def get_sample_uncertainty_profile(balls: int) -> Dict[str, Any]:
     w = balls / (balls + 50.0)
     se = 16.0 / np.sqrt(max(1.0, balls / 25.0))
     moe = 1.96 * se
-    
+
     if balls >= 220:
         tier = "Tier 1: High Volume / High Statistical Certainty"
         reliability_tag = "ELITE PROVEN"
@@ -315,7 +319,7 @@ def get_sample_uncertainty_profile(balls: int) -> Dict[str, Any]:
         tier = "Tier 4: Developing / High Volatility"
         reliability_tag = "EMERGING POTENTIAL"
         desc = "Limited pressure volume; wide confidence interval warrants disciplined valuation."
-        
+
     return {
         "balls": balls,
         "credibility_weight": round(w * 100.0, 1),
@@ -508,7 +512,7 @@ RR_TACTICAL_DOSSIERS = {
         ),
         "auction_target_tier": "Finisher Archetype Reference"
     },
-    
+
     # Bowlers
     781: {
         "player_name": "Sunil Narine",
@@ -697,10 +701,10 @@ def build_auction_dossier(
     """
     splits_data = compute_player_competition_split(deliveries_df, player_id, is_batter=is_batter)
     role_data = classify_player_role_and_phases(deliveries_df, player_id, is_batter=is_batter)
-    
+
     player_name = splits_data["player_name"]
     splits = splits_data["splits"]
-    
+
     # Extract total balls for uncertainty
     if is_batter:
         tot_balls = splits["Combined"]["hp_balls"]
@@ -710,13 +714,13 @@ def build_auction_dossier(
         tot_balls = splits["Combined"]["hp_legal_balls"]
         ipl_balls = splits["IPL"]["hp_legal_balls"]
         t20i_balls = splits["T20I"]["hp_legal_balls"]
-        
+
     uncertainty = get_sample_uncertainty_profile(tot_balls)
     ipl_uncertainty = get_sample_uncertainty_profile(ipl_balls)
-    
+
     # Delta analysis: IPL vs Combined
     delta_score = (ipl_score - comb_score) if ipl_score is not None else 0.0
-    
+
     # Fetch tactical notes from repository
     tactical_notes = RR_TACTICAL_DOSSIERS.get(player_id, {
         "player_name": player_name,
@@ -725,7 +729,7 @@ def build_auction_dossier(
         "rr_tactical_fit": "Versatile squad asset; evaluate against specific role requirements at Jaipur.",
         "auction_target_tier": "Tactical Shortlist Target"
     })
-    
+
     return {
         "player_id": player_id,
         "player_name": player_name,
@@ -756,44 +760,44 @@ def generate_all_auction_assets(
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     rankings = compute_auction_rankings(deliveries_df)
-    
+
     # 1. Save IPL-Only Top 10 Batters
     ipl_bat = rankings["batters_ipl"].copy()
     ipl_bat.to_csv(output_dir / "RR_IPL_Only_Top_10_Batters.csv", index=False)
-    
+
     # 2. Save IPL-Only Top 10 Bowlers
     ipl_bowl = rankings["bowlers_ipl"].copy()
     ipl_bowl.to_csv(output_dir / "RR_IPL_Only_Top_10_Bowlers.csv", index=False)
-    
+
     # 3. Save Combined Top 10 Batters
     comb_bat = rankings["batters_combined"].copy()
     comb_bat.to_csv(output_dir / "RR_Combined_Top_10_Batters.csv", index=False)
-    
+
     # 4. Save Combined Top 10 Bowlers
     comb_bowl = rankings["bowlers_combined"].copy()
     comb_bowl.to_csv(output_dir / "RR_Combined_Top_10_Bowlers.csv", index=False)
-    
+
     # 5. Build Comprehensive Shortlist Dossier Table
     dossier_rows = []
-    
+
     # Shortlisted Batters (Combined top 10 + IPL top 10 unique)
     bat_pids = list(dict.fromkeys(list(comb_bat["player_id"]) + list(ipl_bat["player_id"])))
     for pid in bat_pids:
         c_row = comb_bat[comb_bat["player_id"] == pid]
         c_score = c_row["reliability_score"].iloc[0] if not c_row.empty else None
         c_rank = int(c_row["rank"].iloc[0]) if not c_row.empty else None
-        
+
         i_row = ipl_bat[ipl_bat["player_id"] == pid]
         i_score = i_row["reliability_score"].iloc[0] if not i_row.empty else None
         i_rank = int(i_row["rank"].iloc[0]) if not i_row.empty else None
-        
+
         dossier = build_auction_dossier(
             deliveries_df, pid, is_batter=True,
             rank=c_rank or i_rank or 99,
             comb_score=c_score or (i_score or 50.0),
             ipl_score=i_score
         )
-        
+
         sp = dossier["splits"]
         dossier_rows.append({
             "category": "Batter",
@@ -823,25 +827,25 @@ def generate_all_auction_assets(
             "credibility_weight": dossier["uncertainty"]["credibility_weight"],
             "jaipur_tactical_fit": dossier["rr_tactical_fit"]
         })
-        
+
     # Shortlisted Bowlers (Combined top 10 + IPL top 10 unique)
     bowl_pids = list(dict.fromkeys(list(comb_bowl["player_id"]) + list(ipl_bowl["player_id"])))
     for pid in bowl_pids:
         c_row = comb_bowl[comb_bowl["player_id"] == pid]
         c_score = c_row["reliability_score"].iloc[0] if not c_row.empty else None
         c_rank = int(c_row["rank"].iloc[0]) if not c_row.empty else None
-        
+
         i_row = ipl_bowl[ipl_bowl["player_id"] == pid]
         i_score = i_row["reliability_score"].iloc[0] if not i_row.empty else None
         i_rank = int(i_row["rank"].iloc[0]) if not i_row.empty else None
-        
+
         dossier = build_auction_dossier(
             deliveries_df, pid, is_batter=False,
             rank=c_rank or i_rank or 99,
             comb_score=c_score or (i_score or 50.0),
             ipl_score=i_score
         )
-        
+
         sp = dossier["splits"]
         dossier_rows.append({
             "category": "Bowler",
@@ -871,10 +875,10 @@ def generate_all_auction_assets(
             "credibility_weight": dossier["uncertainty"]["credibility_weight"],
             "jaipur_tactical_fit": dossier["rr_tactical_fit"]
         })
-        
+
     dossier_df = pd.DataFrame(dossier_rows)
     dossier_df.to_csv(output_dir / "RR_Auction_Shortlist_Comprehensive_Dossier.csv", index=False)
-    
+
     logger.info("Successfully generated all auction intelligence assets.")
     return {
         "dossier": dossier_df,

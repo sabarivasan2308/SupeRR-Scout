@@ -86,7 +86,7 @@ st.markdown(f"""
 # ==================== 2. PERSISTENT SLICER PANEL ====================
 with st.container():
     st.markdown("""
-    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #E6007E; 
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #E6007E;
                 border-radius: 12px 12px 0 0; padding: 12px 20px; margin-bottom: 0;">
         <div style="font-size: 13px; font-weight: 800; color: #F7F8FC; letter-spacing: 0.8px;">
             🎛️ TOURNAMENT SCOPE & ROLE SLICERS
@@ -124,7 +124,7 @@ with st.container():
     # Determine active dataset
     is_batter = ("Batters" in st.session_state["top10_role"])
     is_combined = ("Combined" in st.session_state["top10_scope"])
-    
+
     if is_batter:
         active_df = top_10_batters if is_combined else ipl_top_batters
     else:
@@ -233,7 +233,7 @@ tab_lead, tab_compare, tab_dossiers, tab_unstop = st.tabs([
 with tab_lead:
     st.markdown(f"#### Top 10 { 'Batters' if is_batter else 'Bowlers'} ({st.session_state['top10_scope']})")
     st.caption("Click any bar on the chart to spotlight that player across the war room.")
-    
+
     # Search and Sort Controls
     col_ctrl_search, col_ctrl_sort = st.columns([1.5, 2.5])
     with col_ctrl_search:
@@ -244,13 +244,13 @@ with tab_lead:
             options=["Reliability Score (Official Rank)", "High-Pressure Deliveries", "HP Strike Rate / Economy", "Clutch Delta"],
             key="top10_sort_choice"
         )
-        
+
     filtered_display_df = active_df.copy()
     if search_query.strip():
         filtered_display_df = filtered_display_df[
             filtered_display_df["player_name"].str.contains(search_query.strip(), case=False, na=False)
         ]
-        
+
     if "Deliveries" in sort_choice:
         sort_c = "hp_balls" if is_batter else "hp_legal_balls"
         filtered_display_df = filtered_display_df.sort_values(sort_c, ascending=False)
@@ -266,9 +266,9 @@ with tab_lead:
             filtered_display_df = filtered_display_df.sort_values("econ_delta", ascending=True)
     else:
         filtered_display_df = filtered_display_df.sort_values("rank", ascending=True)
-    
+
     col_chart, col_tbl = st.columns([1.1, 0.9])
-    
+
     with col_chart:
         fig_bar = build_pbi_leaderboard_chart(active_df, is_batter=is_batter, selected_player=focus_p, top_n=10)
         c_event = st.plotly_chart(fig_bar, on_select="rerun", selection_mode="points", key="top10_chart", use_container_width=True)
@@ -303,32 +303,43 @@ with tab_lead:
             file_name=f"Top_10_{'Batters' if is_batter else 'Bowlers'}_{st.session_state['top10_scope'].replace(' ', '_')}.csv",
             mime="text/csv"
         )
-        
+
     # Ranking Explanation Callout
     if not active_df.empty:
         top_hero = active_df.iloc[0]
         n_opp = top_hero["hp_balls"] if is_batter else top_hero["hp_legal_balls"]
         w_cred = (n_opp / (n_opp + 50.0)) * 100.0
+
+        if is_batter:
+            realization_str = f"a Strike Rate of <b>{top_hero['hp_strike_rate']:.1f}</b> and Average of <b>{top_hero['hp_average']:.1f}</b>"
+            clutch_delta_val = top_hero.get("sr_delta", 0.0)
+            clutch_delta_str = f"{clutch_delta_val:+.1f} SR"
+        else:
+            realization_str = f"an Economy of <b>{top_hero['hp_economy']:.2f} RPO</b> with <b>{int(top_hero['hp_wickets'])}</b> wickets"
+            clutch_delta_val = top_hero.get("econ_delta", 0.0)
+            clutch_delta_str = f"{clutch_delta_val:+.2f} Econ"
+
+        ci_str = str(top_hero.get("confidence_interval", "N/A"))
+
         with st.expander(f"ℹ️ Why is {top_hero['player_name']} Ranked #1? (Mathematical Derivation Breakdown)"):
             st.markdown(f"""
             <div style="font-size: 13px; line-height: 1.6; color: #A8B3CC;">
                 <b style="color: #F7F8FC;">1. Sample Volume & Bayesian Credibility:</b><br/>
                 With <b>{int(n_opp)}</b> high-pressure balls, {top_hero['player_name']} receives a data credibility weight of <b>{w_cred:.1f}%</b> under the Empirical Bayes model (<code>w = n / (n + 50)</code>).<br/><br/>
                 <b style="color: #F7F8FC;">2. High-Pressure Realization:</b><br/>
-                Under extreme match leverage (P ≥ 65.0), {top_hero['player_name']} records 
-                {'a Strike Rate of <b>' + str(round(top_hero['hp_strike_rate'], 1)) + '</b> and Average of <b>' + str(round(top_hero['hp_average'], 1)) + '</b>' if is_batter else 'an Economy of <b>' + str(round(top_hero['hp_economy'], 2)) + ' RPO</b> with <b>' + str(int(top_hero['hp_wickets'])) + '</b> wickets'}.<br/><br/>
+                Under extreme match leverage (P ≥ 65.0), {top_hero['player_name']} records {realization_str}.<br/><br/>
                 <b style="color: #F7F8FC;">3. Clutch Elevation Factor:</b><br/>
-                {top_hero['player_name']} elevates performance under pressure with a clutch delta of 
-                <b style="color: #2ECC71;">{f'{top_hero.get(\"sr_delta\", 0):+.1f} SR' if is_batter else f'{top_hero.get(\"econ_delta\", 0):+.2f} Econ'}</b> relative to standard conditions.<br/><br/>
+                {top_hero['player_name']} elevates performance under pressure with a clutch delta of
+                <b style="color: #2ECC71;">{clutch_delta_str}</b> relative to standard conditions.<br/><br/>
                 <b style="color: #F7F8FC;">4. Uncertainty Regularization:</b><br/>
-                The 95% Confidence Interval is compact at <code>{top_hero.get('confidence_interval', 'N/A')}</code>, verifying statistical stability.
+                The 95% Confidence Interval is compact at <code>{ci_str}</code>, verifying statistical stability.
             </div>
             """, unsafe_allow_html=True)
 
 with tab_compare:
     st.markdown("#### ⚔️ Top 10 Head-to-Head Comparison")
     st.caption("Select any two players from the Top 10 to inspect side-by-side metric differentials.")
-    
+
     p_names_list = active_df["player_name"].tolist()
     if len(p_names_list) >= 2:
         col_c_p1, col_c_p2 = st.columns(2)
@@ -336,10 +347,33 @@ with tab_compare:
             p1 = st.selectbox("Select Player 1:", options=p_names_list, index=0, key="duel_p1")
         with col_c_p2:
             p2 = st.selectbox("Select Player 2:", options=p_names_list, index=1, key="duel_p2")
-            
+
         row_p1 = active_df[active_df["player_name"] == p1].iloc[0]
         row_p2 = active_df[active_df["player_name"] == p2].iloc[0]
-        
+
+        if is_batter:
+            p1_stat_line = f"HP SR: <b>{row_p1['hp_strike_rate']:.1f}</b> | HP Avg: <b>{row_p1['hp_average']:.1f}</b>"
+            p1_balls = int(row_p1["hp_balls"])
+            p1_delta = row_p1.get("sr_delta", 0.0)
+            p1_elev = " (Elevated)" if p1_delta > 0 else ""
+            p1_clutch = f"<b>{p1_delta:+.1f} SR</b>{p1_elev}"
+
+            p2_stat_line = f"HP SR: <b>{row_p2['hp_strike_rate']:.1f}</b> | HP Avg: <b>{row_p2['hp_average']:.1f}</b>"
+            p2_balls = int(row_p2["hp_balls"])
+            p2_delta = row_p2.get("sr_delta", 0.0)
+            p2_elev = " (Elevated)" if p2_delta > 0 else ""
+            p2_clutch = f"<b>{p2_delta:+.1f} SR</b>{p2_elev}"
+        else:
+            p1_stat_line = f"HP Econ: <b>{row_p1['hp_economy']:.2f}</b> | Wkts: <b>{int(row_p1['hp_wickets'])}</b>"
+            p1_balls = int(row_p1["hp_legal_balls"])
+            p1_delta = row_p1.get("econ_delta", 0.0)
+            p1_clutch = f"<b>{p1_delta:+.2f} Econ</b>"
+
+            p2_stat_line = f"HP Econ: <b>{row_p2['hp_economy']:.2f}</b> | Wkts: <b>{int(row_p2['hp_wickets'])}</b>"
+            p2_balls = int(row_p2["hp_legal_balls"])
+            p2_delta = row_p2.get("econ_delta", 0.0)
+            p2_clutch = f"<b>{p2_delta:+.2f} Econ</b>"
+
         col_card1, col_card2 = st.columns(2)
         with col_card1:
             st.markdown(f"""
@@ -350,13 +384,13 @@ with tab_compare:
                     {row_p1['reliability_score']:.1f}<span style="font-size: 13px; color: #A8B3CC;">/100</span>
                 </div>
                 <div style="font-size: 12px; color: #A8B3CC; margin-top: 8px;">
-                    {'HP SR: <b>' + str(round(row_p1['hp_strike_rate'], 1)) + '</b> | HP Avg: <b>' + str(round(row_p1['hp_average'], 1)) + '</b>' if is_batter else 'HP Econ: <b>' + str(round(row_p1['hp_economy'], 2)) + '</b> | Wkts: <b>' + str(int(row_p1['hp_wickets'])) + '</b>'}<br/>
-                    HP Deliveries: <b>{int(row_p1['hp_balls'] if is_batter else row_p1['hp_legal_balls'])}</b><br/>
-                    Clutch Delta: <b>{row_p1.get('sr_delta', 0):+.1f} SR</b>{' (Elevated)' if row_p1.get('sr_delta', 0) > 0 else '' if is_batter else f'{row_p1.get(\"econ_delta\", 0):+.2f} Econ'}
+                    {p1_stat_line}<br/>
+                    HP Deliveries: <b>{p1_balls}</b><br/>
+                    Clutch Delta: {p1_clutch}
                 </div>
             </div>
             """, unsafe_allow_html=True)
-            
+
         with col_card2:
             st.markdown(f"""
             <div class="rr-card" style="border-top: 3px solid {RR_GOLD}; padding: 18px;">
@@ -366,9 +400,9 @@ with tab_compare:
                     {row_p2['reliability_score']:.1f}<span style="font-size: 13px; color: #A8B3CC;">/100</span>
                 </div>
                 <div style="font-size: 12px; color: #A8B3CC; margin-top: 8px;">
-                    {'HP SR: <b>' + str(round(row_p2['hp_strike_rate'], 1)) + '</b> | HP Avg: <b>' + str(round(row_p2['hp_average'], 1)) + '</b>' if is_batter else 'HP Econ: <b>' + str(round(row_p2['hp_economy'], 2)) + '</b> | Wkts: <b>' + str(int(row_p2['hp_wickets'])) + '</b>'}<br/>
-                    HP Deliveries: <b>{int(row_p2['hp_balls'] if is_batter else row_p2['hp_legal_balls'])}</b><br/>
-                    Clutch Delta: <b>{row_p2.get('sr_delta', 0):+.1f} SR</b>{' (Elevated)' if row_p2.get('sr_delta', 0) > 0 else '' if is_batter else f'{row_p2.get(\"econ_delta\", 0):+.2f} Econ'}
+                    {p2_stat_line}<br/>
+                    HP Deliveries: <b>{p2_balls}</b><br/>
+                    Clutch Delta: {p2_clutch}
                 </div>
             </div>
             """, unsafe_allow_html=True)
@@ -378,14 +412,14 @@ with tab_dossiers:
     for _, row in active_df.iterrows():
         is_highlighted = bool(focus_p and row["player_name"] == focus_p)
         border_col = RR_GOLD if is_highlighted else (RR_PINK if is_batter else RR_ELECTRIC)
-        
+
         rk = row.get("rank", "N/A")
         pname = row["player_name"]
         score = row["reliability_score"]
         insight = row.get("best_supporting_insight", "")
         ci = row.get("confidence_interval", "")
         cr = row.get("confidence_rating", "High")
-        
+
         with st.expander(f"Rank #{rk} — {pname} (Reliability Score: {score:.1f}) {'★ ACTIVE FOCUS' if is_highlighted else ''}", expanded=is_highlighted):
             c1, c2 = st.columns([1.2, 0.8])
             with c1:
@@ -410,10 +444,10 @@ with tab_dossiers:
 with tab_unstop:
     st.markdown("### 📋 Unstop Official Submission Table")
     st.caption("Standardized export format with exact column schema required by the hackathon submission portal.")
-    
+
     unstop_df = generate_unstop_submission_table(top_10_batters, top_10_bowlers)
     st.dataframe(unstop_df, use_container_width=True, hide_index=True)
-    
+
     col_u1, col_u2 = st.columns(2)
     with col_u1:
         unstop_csv = unstop_df.to_csv(index=False).encode("utf-8")
@@ -424,13 +458,15 @@ with tab_unstop:
             mime="text/csv"
         )
     with col_u2:
-        pdf_path = Path("assets/SupeRR_Scout_Auction_Report.pdf")
+        pdf_path = Path("assets/SupeRR_Scout_Official_Unstop_Report.pdf")
+        if not pdf_path.exists():
+            pdf_path = Path("assets/SupeRR_Scout_Auction_Report.pdf")
         if pdf_path.exists():
             with open(pdf_path, "rb") as f:
                 pdf_bytes = f.read()
             st.download_button(
-                "📄 Download Executive PDF Dossier (ReportLab)",
+                "📄 Download Official Unstop Methodology Report (PDF)",
                 data=pdf_bytes,
-                file_name="SupeRR_Scout_Executive_Report.pdf",
+                file_name="SupeRR_Scout_Official_Unstop_Report.pdf",
                 mime="application/pdf"
             )

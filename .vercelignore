@@ -1,0 +1,15 @@
+# Vercel Deployment Ignore Rules
+# Exclude Python runtime scripts from triggering serverless function detection
+app.py
+precompute.py
+audit_pipeline.py
+test_id_audit.py
+generate_unstop_pdf.py
+pages/
+src/
+tests/
+data/
+assets/*.docx.pdf
+.pytest_cache/
+__pycache__/
+*.pyc

@@ -30,7 +30,7 @@ def test_bowling_metrics_calculation(mock_bowling_data):
     """Verify bowling metrics aggregate correctly."""
     metrics = compute_bowling_metrics(mock_bowling_data, min_balls_hp=6)
     assert len(metrics) == 2
-    
+
     bowler_x = metrics[metrics["player_name"] == "Bowler X"].iloc[0]
     assert bowler_x["hp_legal_balls"] == 10
     assert bowler_x["hp_runs_conceded"] == 7
@@ -43,7 +43,7 @@ def test_bowling_reliability_score(mock_bowling_data):
     """Verify reliability score calculation and ranking."""
     metrics = compute_bowling_metrics(mock_bowling_data, min_balls_hp=6)
     ranked = apply_bowling_reliability_model(metrics)
-    
+
     assert "reliability_score" in ranked.columns
     assert "ci_lower" in ranked.columns
     assert "ci_upper" in ranked.columns
@@ -76,4 +76,3 @@ def test_bowling_splits_schema_and_runs_conceded():
     slice_cols = ["competition_type", "legal_balls", "runs_conceded", "wickets", "economy", "hp_legal_balls", "hp_economy"]
     selected = comp_df[slice_cols]
     assert len(selected) > 0
-

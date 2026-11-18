@@ -48,9 +48,9 @@ def build_pdf_report(
         topMargin=36,
         bottomMargin=36
     )
-    
+
     styles = getSampleStyleSheet()
-    
+
     # Custom Typography Styles
     title_style = ParagraphStyle(
         "DocTitle",
@@ -61,7 +61,7 @@ def build_pdf_report(
         textColor=C_RR_PINK,
         alignment=TA_LEFT
     )
-    
+
     subtitle_style = ParagraphStyle(
         "DocSubTitle",
         parent=styles["Normal"],
@@ -71,7 +71,7 @@ def build_pdf_report(
         textColor=C_RR_BLUE,
         alignment=TA_LEFT
     )
-    
+
     h1_style = ParagraphStyle(
         "Heading1_Custom",
         parent=styles["Heading1"],
@@ -82,7 +82,7 @@ def build_pdf_report(
         spaceBefore=12,
         spaceAfter=6
     )
-    
+
     h2_style = ParagraphStyle(
         "Heading2_Custom",
         parent=styles["Heading2"],
@@ -93,7 +93,7 @@ def build_pdf_report(
         spaceBefore=8,
         spaceAfter=4
     )
-    
+
     body_style = ParagraphStyle(
         "Body_Custom",
         parent=styles["Normal"],
@@ -104,7 +104,7 @@ def build_pdf_report(
         alignment=TA_JUSTIFY,
         spaceAfter=6
     )
-    
+
     meta_style = ParagraphStyle(
         "Meta_Custom",
         parent=styles["Normal"],
@@ -113,7 +113,7 @@ def build_pdf_report(
         leading=11,
         textColor=C_MUTED
     )
-    
+
     table_cell = ParagraphStyle(
         "TableCell",
         parent=styles["Normal"],
@@ -122,7 +122,7 @@ def build_pdf_report(
         leading=10,
         textColor=C_TEXT
     )
-    
+
     table_header = ParagraphStyle(
         "TableHeader",
         parent=styles["Normal"],
@@ -133,13 +133,13 @@ def build_pdf_report(
     )
 
     story = []
-    
+
     # Header Banner
     story.append(Paragraph("SupeRR SCOUT — PRESSURE INTELLIGENCE PLATFORM", title_style))
     story.append(Paragraph("Rajasthan Royals IPL 2027 Auction Research | Round 1 Official Report", subtitle_style))
     story.append(Spacer(1, 6))
     story.append(HRFlowable(width="100%", thickness=2, color=C_RR_PINK, spaceBefore=2, spaceAfter=8))
-    
+
     # Metadata bar
     meta_text = (
         f"<b>Scope:</b> 2022–2026 IPL & T20I Matches | <b>Deliveries Analysed:</b> {summary_stats.get('total_deliveries', 200999):,} | "
@@ -147,7 +147,7 @@ def build_pdf_report(
     )
     story.append(Paragraph(meta_text, meta_style))
     story.append(Spacer(1, 10))
-    
+
     # Section 1: Executive Summary
     story.append(Paragraph("1. Executive Summary & Objective", h1_style))
     exec_summary_text = (
@@ -161,13 +161,13 @@ def build_pdf_report(
         "for Rajasthan Royals' IPL 2027 squad construction."
     )
     story.append(Paragraph(exec_summary_text, body_style))
-    
+
     # Key Highlights Table
     top_bat_name = top_batters.iloc[0]["player_name"] if not top_batters.empty else "N/A"
     top_bat_score = top_batters.iloc[0]["reliability_score"] if not top_batters.empty else 0.0
     top_bowl_name = top_bowlers.iloc[0]["player_name"] if not top_bowlers.empty else "N/A"
     top_bowl_score = top_bowlers.iloc[0]["reliability_score"] if not top_bowlers.empty else 0.0
-    
+
     kpi_data = [
         [
             Paragraph(f"<b>Top Rated Batter</b><br/>{top_bat_name} ({top_bat_score:.1f}/100)", table_cell),
@@ -186,7 +186,7 @@ def build_pdf_report(
     ]))
     story.append(t_kpi)
     story.append(Spacer(1, 10))
-    
+
     # Section 2: Methodology & Pressure Formulation
     story.append(Paragraph("2. Pressure Formulation & Mathematical Modeling", h1_style))
     method_text = (
@@ -200,7 +200,7 @@ def build_pdf_report(
         "<br/>• <b>Knockout Fixture Multiplier:</b> Deliveries in playoff and knockout matches receive a 1.08× context multiplier."
     )
     story.append(Paragraph(method_text, body_style))
-    
+
     # Section 3: Statistical Fairness & Empirical Bayes
     story.append(Paragraph("3. Statistical Fairness & Shrinkage Formulation", h1_style))
     bayes_text = (
@@ -213,13 +213,13 @@ def build_pdf_report(
     )
     story.append(Paragraph(bayes_text, body_style))
     story.append(Spacer(1, 10))
-    
+
     # Section 4: Top 10 Batters Leaderboard
     story.append(Paragraph("4. TOP 10 BATTERS UNDER PRESSURE", h1_style))
-    
+
     bat_headers = ["Rk", "Player Name", "Score", "HP Balls", "HP Runs", "HP SR", "HP Avg", "Bnd %", "Δ SR", "95% CI"]
     bat_table_data = [[Paragraph(h, table_header) for h in bat_headers]]
-    
+
     for _, r in top_batters.head(10).iterrows():
         bat_table_data.append([
             Paragraph(f"<b>#{r['rank']}</b>", table_cell),
@@ -233,7 +233,7 @@ def build_pdf_report(
             Paragraph(f"{r['sr_delta']:+.1f}", table_cell),
             Paragraph(f"[{r['ci_lower']:.1f}-{r['ci_upper']:.1f}]", table_cell),
         ])
-        
+
     t_bat = Table(bat_table_data, colWidths=[24, 110, 36, 46, 44, 46, 46, 44, 44, 70])
     t_bat.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), C_RR_PINK),
@@ -246,13 +246,13 @@ def build_pdf_report(
     ]))
     story.append(t_bat)
     story.append(Spacer(1, 12))
-    
+
     # Section 5: Top 10 Bowlers Leaderboard
     story.append(Paragraph("5. TOP 10 BOWLERS UNDER PRESSURE", h1_style))
-    
+
     bowl_headers = ["Rk", "Player Name", "Score", "HP Balls", "Overs", "HP Wkts", "HP Econ", "Dot %", "Δ Econ", "95% CI"]
     bowl_table_data = [[Paragraph(h, table_header) for h in bowl_headers]]
-    
+
     for _, r in top_bowlers.head(10).iterrows():
         bowl_table_data.append([
             Paragraph(f"<b>#{r['rank']}</b>", table_cell),
@@ -266,7 +266,7 @@ def build_pdf_report(
             Paragraph(f"{r['econ_delta']:+.2f}", table_cell),
             Paragraph(f"[{r['ci_lower']:.1f}-{r['ci_upper']:.1f}]", table_cell),
         ])
-        
+
     t_bowl = Table(bowl_table_data, colWidths=[24, 110, 36, 46, 44, 46, 46, 44, 44, 70])
     t_bowl.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), C_RR_BLUE),
@@ -279,7 +279,7 @@ def build_pdf_report(
     ]))
     story.append(t_bowl)
     story.append(Spacer(1, 14))
-    
+
     # Section 6: Key Scouting Insights & Recommendations
     story.append(Paragraph("6. Rajasthan Royals IPL 2027 Auction Takeaways", h1_style))
     recs_text = (
@@ -292,10 +292,10 @@ def build_pdf_report(
         "provide match-winning containment and breakthroughs. Haris Rauf (71.3 score, 9.5 SR) offers lethal death-over wicket taking."
     )
     story.append(Paragraph(recs_text, body_style))
-    
+
     # Build Document
     doc.build(story)
-    
+
     if output_path is not None:
         with open(output_path, "rb") as f:
             return f.read()
@@ -333,9 +333,9 @@ def build_auction_pdf_report(
         topMargin=32,
         bottomMargin=32
     )
-    
+
     styles = getSampleStyleSheet()
-    
+
     title_style = ParagraphStyle(
         "AuctionDocTitle",
         parent=styles["Normal"],
@@ -345,7 +345,7 @@ def build_auction_pdf_report(
         textColor=C_RR_PINK,
         alignment=TA_LEFT
     )
-    
+
     subtitle_style = ParagraphStyle(
         "AuctionDocSubTitle",
         parent=styles["Normal"],
@@ -355,7 +355,7 @@ def build_auction_pdf_report(
         textColor=C_RR_BLUE,
         alignment=TA_LEFT
     )
-    
+
     h1_style = ParagraphStyle(
         "AuctionH1",
         parent=styles["Heading1"],
@@ -366,7 +366,7 @@ def build_auction_pdf_report(
         spaceBefore=10,
         spaceAfter=5
     )
-    
+
     h2_style = ParagraphStyle(
         "AuctionH2",
         parent=styles["Heading2"],
@@ -377,7 +377,7 @@ def build_auction_pdf_report(
         spaceBefore=7,
         spaceAfter=3
     )
-    
+
     body_style = ParagraphStyle(
         "AuctionBody",
         parent=styles["Normal"],
@@ -388,7 +388,7 @@ def build_auction_pdf_report(
         alignment=TA_JUSTIFY,
         spaceAfter=5
     )
-    
+
     meta_style = ParagraphStyle(
         "AuctionMeta",
         parent=styles["Normal"],
@@ -397,7 +397,7 @@ def build_auction_pdf_report(
         leading=10,
         textColor=C_MUTED
     )
-    
+
     table_cell = ParagraphStyle(
         "AuctionTableCell",
         parent=styles["Normal"],
@@ -406,7 +406,7 @@ def build_auction_pdf_report(
         leading=9.5,
         textColor=C_TEXT
     )
-    
+
     table_header = ParagraphStyle(
         "AuctionTableHeader",
         parent=styles["Normal"],
@@ -417,20 +417,20 @@ def build_auction_pdf_report(
     )
 
     story = []
-    
+
     # Title & Metadata Banner
     story.append(Paragraph("RAJASTHAN ROYALS — IPL 2027 AUCTION INTELLIGENCE DOSSIER", title_style))
     story.append(Paragraph("Strategic Recruitment & Empirical Pressure Reliability Research | Confidential", subtitle_style))
     story.append(Spacer(1, 4))
     story.append(HRFlowable(width="100%", thickness=2, color=C_RR_PINK, spaceBefore=2, spaceAfter=6))
-    
+
     meta_text = (
         f"<b>Scope:</b> 2022–2026 IPL & T20I Matches | <b>Deliveries Analysed:</b> {summary_stats.get('total_deliveries', 200999):,} | "
         f"<b>Shortlisted Targets:</b> {len(dossier_df)} | <b>High-Pressure Threshold:</b> Index ≥ 65.0 | <b>Venue Reference:</b> Sawai Mansingh Stadium"
     )
     story.append(Paragraph(meta_text, meta_style))
     story.append(Spacer(1, 8))
-    
+
     # Section 1: Executive Strategic Memo
     story.append(Paragraph("1. Executive Strategic Memo for Rajasthan Royals Management", h1_style))
     memo_text = (
@@ -444,7 +444,7 @@ def build_auction_pdf_report(
         "at the Sawai Mansingh Stadium (Jaipur)."
     )
     story.append(Paragraph(memo_text, body_style))
-    
+
     # Venue Dynamics Box
     venue_text = (
         "<b>Sawai Mansingh Stadium (Jaipur) Tactical Dynamics:</b><br/>"
@@ -464,7 +464,7 @@ def build_auction_pdf_report(
     ]))
     story.append(t_venue)
     story.append(Spacer(1, 8))
-    
+
     # Section 2: IPL-Only Top 10 Leaderboards
     story.append(Paragraph("2. Official IPL-Only Pressure Reliability Rankings", h1_style))
     story.append(Paragraph(
@@ -472,7 +472,7 @@ def build_auction_pdf_report(
         "Incorporates Empirical Bayes shrinkage against the IPL population prior and sample-size uncertainty bounds.",
         body_style
     ))
-    
+
     # IPL Batters Table
     story.append(Paragraph("<b>IPL-Only Top 10 Batters under Pressure</b>", h2_style))
     bat_headers = ["Rk", "Player Name", "Score", "IPL HP Balls", "HP Runs", "HP SR", "HP Avg", "Bnd %", "Δ SR", "95% CI"]
@@ -502,7 +502,7 @@ def build_auction_pdf_report(
     ]))
     story.append(t_ipl_bat)
     story.append(Spacer(1, 6))
-    
+
     # IPL Bowlers Table
     story.append(Paragraph("<b>IPL-Only Top 10 Bowlers under Pressure</b>", h2_style))
     bowl_headers = ["Rk", "Player Name", "Score", "IPL HP Balls", "Overs", "HP Wkts", "HP Econ", "Dot %", "Δ Econ", "95% CI"]
@@ -532,10 +532,10 @@ def build_auction_pdf_report(
     ]))
     story.append(t_ipl_bowl)
     story.append(Spacer(1, 8))
-    
+
     # Page Break for Tactical Dossiers
     story.append(PageBreak())
-    
+
     # Section 3: Competition Disaggregation & Delta Analysis
     story.append(Paragraph("3. Overall Reliability vs. IPL-Specific Reliability (Delta Analysis)", h1_style))
     delta_expl = (
@@ -547,14 +547,14 @@ def build_auction_pdf_report(
     )
     story.append(Paragraph(delta_expl, body_style))
     story.append(Spacer(1, 6))
-    
+
     # Section 4: Target Auction Suitability Dossiers
     story.append(Paragraph("4. Rajasthan Royals Priority Recruitment Dossiers", h1_style))
     story.append(Paragraph(
         "Structured scouting evaluations separating measured empirical facts from qualitative franchise recommendations.",
         body_style
     ))
-    
+
     # We display key targets in detail
     key_target_ids = [4708, 1077, 6396, 8101, 20702, 781, 1612, 6464, 2261, 7503]
     for tid in key_target_ids:
@@ -562,10 +562,10 @@ def build_auction_pdf_report(
         if t_rows.empty:
             continue
         row = t_rows.iloc[0]
-        
+
         ipl_score_str = f"{row['ipl_score']:.1f}" if pd.notna(row['ipl_score']) else "N/A"
         delta_str = f"{row['delta_ipl']:+.1f}" if pd.notna(row['delta_ipl']) else "N/A"
-        
+
         card_content = [
             [
                 Paragraph(f"<b>{row['player_name']}</b> (ID: {tid}) — <i>{row['primary_role']}</i>", table_header),
@@ -598,9 +598,9 @@ def build_auction_pdf_report(
             ('RIGHTPADDING', (0,0), (-1,-1), 6),
         ]))
         story.append(KeepTogether([t_card, Spacer(1, 5)]))
-        
+
     story.append(Spacer(1, 6))
-    
+
     # Section 5: Analytical Limitations & Governance
     story.append(Paragraph("5. Analytical Limitations, Scope & Disclaimers", h1_style))
     limit_text = (
@@ -611,14 +611,13 @@ def build_auction_pdf_report(
         "<b>4. Auction Realities:</b> Actual player acquisitions in the IPL 2027 auction remain subject to franchise retention rules, Right-to-Match (RTM) card availability, and purse dynamics."
     )
     story.append(Paragraph(limit_text, body_style))
-    
+
     # Build Document
     doc.build(story)
-    
+
     if output_path is not None:
         with open(output_path, "rb") as f:
             return f.read()
     else:
         buffer.seek(0)
         return buffer.getvalue()
-

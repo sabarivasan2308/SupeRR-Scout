@@ -19,7 +19,7 @@ def compute_bowling_metrics(
 ) -> pd.DataFrame:
     """
     Compute player-level bowling statistics partitioned into High Pressure and Normal conditions.
-    
+
     Adheres strictly to cricket scoring rules:
     - Runs conceded: Only batter runs + wides/no-balls (byes and leg-byes excluded).
     - Wickets: Only bowler-credited dismissals (Caught, Bowled, LBW, Stumped, Hit Wicket).
@@ -28,11 +28,11 @@ def compute_bowling_metrics(
     # Only consider legal balls for bowler rate calculations
     # Note: We must also account for runs conceded on illegal deliveries
     bowl_df = df.copy()
-    
+
     # Partition by high-pressure bowling flag
     hp_df = bowl_df[bowl_df[pressure_col]]
     norm_df = bowl_df[~bowl_df[pressure_col]]
-    
+
     def _agg_bowling(sub_df: pd.DataFrame, prefix: str) -> pd.DataFrame:
         if sub_df.empty:
             return pd.DataFrame(columns=[
@@ -40,7 +40,7 @@ def compute_bowling_metrics(
                 f"{prefix}_wickets", f"{prefix}_dots", f"{prefix}_boundaries",
                 f"{prefix}_matches", f"{prefix}_overs"
             ])
-            
+
         # Group by bowler_id and bowler_name
         agg = sub_df.groupby(["bowler_id", "bowler_name"]).agg(
             legal_balls=("is_legal_ball_bowler", "sum"),
@@ -51,10 +51,10 @@ def compute_bowling_metrics(
             matches=("match_id", "nunique"),
             total_deliveries=("runs_bowler", "count")
         ).reset_index()
-        
+
         # Calculate overs as standard cricket decimal (e.g. 19 legal balls = 3.1 overs)
         agg["overs"] = (agg["legal_balls"] // 6) + (agg["legal_balls"] % 6) / 10.0
-        
+
         agg.rename(columns={
             "legal_balls": f"{prefix}_legal_balls",
             "runs_conceded": f"{prefix}_runs_conceded",
@@ -70,83 +70,83 @@ def compute_bowling_metrics(
     hp_agg = _agg_bowling(hp_df, "hp")
     norm_agg = _agg_bowling(norm_df, "norm")
     total_agg = _agg_bowling(bowl_df, "total")
-    
+
     # Merge aggregations
     merged = total_agg.merge(hp_agg, on=["bowler_id", "bowler_name"], how="left")
     merged = merged.merge(norm_agg, on=["bowler_id", "bowler_name"], how="left")
-    
+
     for col in merged.columns:
         if col not in ["bowler_id", "bowler_name"]:
             merged[col] = merged[col].fillna(0)
-            
+
     # Calculate derived rates for HP
     merged["hp_economy"] = np.where(
         merged["hp_legal_balls"] > 0,
         (merged["hp_runs_conceded"] / merged["hp_legal_balls"]) * 6.0,
         0.0
     ).round(2)
-    
+
     merged["hp_strike_rate"] = np.where(
         merged["hp_wickets"] > 0,
         (merged["hp_legal_balls"] / merged["hp_wickets"]),
         merged["hp_legal_balls"]
     ).round(2)
-    
+
     merged["hp_average"] = np.where(
         merged["hp_wickets"] > 0,
         (merged["hp_runs_conceded"] / merged["hp_wickets"]),
         merged["hp_runs_conceded"]
     ).round(2)
-    
+
     merged["hp_dot_pct"] = np.where(
         merged["hp_legal_balls"] > 0,
         (merged["hp_dots"] / merged["hp_legal_balls"]) * 100.0,
         0.0
     ).round(2)
-    
+
     merged["hp_boundary_pct"] = np.where(
         merged["hp_legal_balls"] > 0,
         (merged["hp_boundaries"] / merged["hp_legal_balls"]) * 100.0,
         0.0
     ).round(2)
-    
+
     # Calculate derived rates for Normal
     merged["norm_economy"] = np.where(
         merged["norm_legal_balls"] > 0,
         (merged["norm_runs_conceded"] / merged["norm_legal_balls"]) * 6.0,
         0.0
     ).round(2)
-    
+
     merged["norm_strike_rate"] = np.where(
         merged["norm_wickets"] > 0,
         (merged["norm_legal_balls"] / merged["norm_wickets"]),
         merged["norm_legal_balls"]
     ).round(2)
-    
+
     merged["norm_dot_pct"] = np.where(
         merged["norm_legal_balls"] > 0,
         (merged["norm_dots"] / merged["norm_legal_balls"]) * 100.0,
         0.0
     ).round(2)
-    
+
     merged["norm_boundary_pct"] = np.where(
         merged["norm_legal_balls"] > 0,
         (merged["norm_boundaries"] / merged["norm_legal_balls"]) * 100.0,
         0.0
     ).round(2)
-    
+
     # Total rates
     merged["total_economy"] = np.where(
         merged["total_legal_balls"] > 0,
         (merged["total_runs_conceded"] / merged["total_legal_balls"]) * 6.0,
         0.0
     ).round(2)
-    
+
     # Differentials (Normal minus HP: positive econ_delta means tighter economy under pressure!)
     merged["econ_delta"] = (merged["norm_economy"] - merged["hp_economy"]).round(2)
     merged["dot_delta"] = (merged["hp_dot_pct"] - merged["norm_dot_pct"]).round(2)
     merged["boundary_delta"] = (merged["norm_boundary_pct"] - merged["hp_boundary_pct"]).round(2)  # positive means fewer boundaries conceded
-    
+
     # 2. Match-by-match consistency under pressure
     match_hp = hp_df[hp_df["is_legal_ball_bowler"]].groupby(["bowler_id", "match_id"]).agg(
         m_runs=("runs_bowler", "sum"),
@@ -154,7 +154,7 @@ def compute_bowling_metrics(
         m_wickets=("is_bowler_wicket", "sum")
     ).reset_index()
     match_hp["m_econ"] = (match_hp["m_runs"] / match_hp["m_balls"]) * 6.0
-    
+
     # Effective bowling performance: Economy <= 8.5 OR >= 1 HP wicket
     match_hp["is_effective"] = (match_hp["m_econ"] <= 8.5) | (match_hp["m_wickets"] >= 1)
     consistency_agg = match_hp.groupby("bowler_id").agg(
@@ -166,16 +166,16 @@ def compute_bowling_metrics(
         (consistency_agg["effective_match_rate"] * 70.0 + (1.0 - np.clip(consistency_agg["std_econ"] / 6.0, 0.0, 1.0)) * 30.0),
         10.0, 95.0
     ).round(1)
-    
+
     merged = merged.merge(consistency_agg[["bowler_id", "consistency_score", "effective_match_rate"]], on="bowler_id", how="left")
     merged["consistency_score"] = merged["consistency_score"].fillna(30.0)
-    
+
     # Flag eligibility based on min legal balls
     merged["is_eligible"] = merged["hp_legal_balls"] >= min_balls_hp
-    
+
     # Clean player name
     merged.rename(columns={"bowler_name": "player_name", "bowler_id": "player_id"}, inplace=True)
-    
+
     return merged.sort_values(by="hp_wickets", ascending=False).reset_index(drop=True)
 
 
@@ -184,7 +184,7 @@ def compute_bowling_splits(df: pd.DataFrame, player_id: int) -> Dict[str, pd.Dat
     p_df = df[df["bowler_id"] == player_id].copy()
     if p_df.empty:
         return {}
-        
+
     def _split_summary(sub: pd.DataFrame, group_col: str) -> pd.DataFrame:
         res = sub.groupby(group_col).agg(
             legal_balls=("is_legal_ball_bowler", "sum"),

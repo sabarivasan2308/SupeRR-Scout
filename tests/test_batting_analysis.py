@@ -32,7 +32,7 @@ def test_batting_metrics_calculation(mock_batting_data):
     """Verify batting metrics aggregate correctly."""
     metrics = compute_batting_metrics(mock_batting_data, min_balls_hp=5)
     assert len(metrics) == 2
-    
+
     batter_a = metrics[metrics["player_name"] == "Batter A"].iloc[0]
     assert batter_a["hp_balls"] == 8
     assert batter_a["hp_runs"] == 22
@@ -44,7 +44,7 @@ def test_batting_reliability_score(mock_batting_data):
     """Verify reliability score calculation and ranking."""
     metrics = compute_batting_metrics(mock_batting_data, min_balls_hp=5)
     ranked = apply_batting_reliability_model(metrics)
-    
+
     assert "reliability_score" in ranked.columns
     assert "ci_lower" in ranked.columns
     assert "ci_upper" in ranked.columns

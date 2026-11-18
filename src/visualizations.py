@@ -69,7 +69,7 @@ def apply_rr_theme(fig: go.Figure) -> go.Figure:
 def plot_pressure_distribution(df: pd.DataFrame, threshold: float = 65.0) -> go.Figure:
     """Histogram & density distribution of Batting and Bowling Pressure across all deliveries."""
     fig = go.Figure()
-    
+
     fig.add_trace(go.Histogram(
         x=df["pressure_batting"],
         name="Batting Pressure",
@@ -78,7 +78,7 @@ def plot_pressure_distribution(df: pd.DataFrame, threshold: float = 65.0) -> go.
         nbinsx=40,
         histnorm="probability density"
     ))
-    
+
     fig.add_trace(go.Histogram(
         x=df["pressure_bowling"],
         name="Bowling Pressure",
@@ -87,7 +87,7 @@ def plot_pressure_distribution(df: pd.DataFrame, threshold: float = 65.0) -> go.
         nbinsx=40,
         histnorm="probability density"
     ))
-    
+
     # Add vertical line for threshold
     fig.add_vline(
         x=threshold,
@@ -98,7 +98,7 @@ def plot_pressure_distribution(df: pd.DataFrame, threshold: float = 65.0) -> go.
         annotation_position="top right",
         annotation_font_color=RR_GOLD
     )
-    
+
     fig.update_layout(
         title=dict(text="Delivery-Level Pressure Index Distribution (0â€“100)", font=dict(size=16)),
         xaxis_title="Pressure Index",
@@ -111,13 +111,13 @@ def plot_pressure_distribution(df: pd.DataFrame, threshold: float = 65.0) -> go.
 def plot_top_10_horizontal_bar(top_df: pd.DataFrame, title: str, is_batter: bool = True) -> go.Figure:
     """Horizontal bar chart showcasing Top 10 players sorted with rank and score badges."""
     df_sorted = top_df.sort_values("reliability_score", ascending=True).copy()
-    
+
     primary_color = RR_PINK if is_batter else RR_ELECTRIC
     secondary_color = RR_BLUE if is_batter else RR_BLUE
-    
+
     # Labels with rank and name
     y_labels = [f"#{r} {name}" for r, name in zip(df_sorted["rank"], df_sorted["player_name"])]
-    
+
     # Custom hover text
     hover_texts = []
     for _, row in df_sorted.iterrows():
@@ -142,7 +142,7 @@ def plot_top_10_horizontal_bar(top_df: pd.DataFrame, title: str, is_batter: bool
                 f"95% CI: [{row['ci_lower']:.1f} - {row['ci_upper']:.1f}]"
             )
         hover_texts.append(ht)
-        
+
     fig = go.Figure(go.Bar(
         x=df_sorted["reliability_score"],
         y=y_labels,
@@ -157,7 +157,7 @@ def plot_top_10_horizontal_bar(top_df: pd.DataFrame, title: str, is_batter: bool
         hovertext=hover_texts,
         hoverinfo="text"
     ))
-    
+
     fig.update_layout(
         title=dict(text=title, font=dict(size=16)),
         xaxis_title="Pressure Reliability Score (0â€“100)",
@@ -171,7 +171,7 @@ def plot_top_10_horizontal_bar(top_df: pd.DataFrame, title: str, is_batter: bool
 def plot_batting_scatter(bat_df: pd.DataFrame, min_balls: int = 60) -> go.Figure:
     """Scatter plot matrix: High-Pressure Strike Rate vs Average with bubble size for balls faced."""
     sub = bat_df[bat_df["hp_balls"] >= min_balls].copy()
-    
+
     fig = px.scatter(
         sub,
         x="hp_strike_rate",
@@ -190,11 +190,11 @@ def plot_batting_scatter(bat_df: pd.DataFrame, min_balls: int = 60) -> go.Figure
         color_continuous_scale=[[0, "#1746A2"], [0.5, "#287BFF"], [1, "#E6007E"]],
         title=f"Batting Efficiency under High Pressure (Min {min_balls} Balls Faced)"
     )
-    
+
     # Add benchmark reference lines
     fig.add_hline(y=30.0, line_dash="dot", line_color=RR_MUTED, annotation_text="Benchmark Avg (30.0)")
     fig.add_vline(x=150.0, line_dash="dot", line_color=RR_MUTED, annotation_text="Benchmark SR (150.0)")
-    
+
     fig.update_layout(
         xaxis_title="High-Pressure Strike Rate",
         yaxis_title="High-Pressure Average (Runs/Dismissal)",
@@ -206,7 +206,7 @@ def plot_batting_scatter(bat_df: pd.DataFrame, min_balls: int = 60) -> go.Figure
 def plot_bowling_scatter(bowl_df: pd.DataFrame, min_balls: int = 60) -> go.Figure:
     """Scatter plot: Bowling Economy vs Strike Rate (axes inverted so top-right represents elite)."""
     sub = bowl_df[bowl_df["hp_legal_balls"] >= min_balls].copy()
-    
+
     fig = px.scatter(
         sub,
         x="hp_economy",
@@ -225,14 +225,14 @@ def plot_bowling_scatter(bowl_df: pd.DataFrame, min_balls: int = 60) -> go.Figur
         color_continuous_scale=[[0, "#1746A2"], [0.5, "#287BFF"], [1, "#E6007E"]],
         title=f"Bowling Containment vs Wicket-Taking Matrix (Min {min_balls} Balls)"
     )
-    
+
     # Invert axes so lower economy and lower strike rate are at the top-right!
     fig.update_xaxes(autorange="reversed")
     fig.update_yaxes(autorange="reversed")
-    
+
     fig.add_vline(x=8.5, line_dash="dot", line_color=RR_MUTED, annotation_text="Elite Econ (<= 8.5)")
     fig.add_hline(y=14.0, line_dash="dot", line_color=RR_MUTED, annotation_text="Elite SR (<= 14 balls/wkt)")
-    
+
     fig.update_layout(
         xaxis_title="High-Pressure Economy Rate (Inverted: Left is higher, Right is lower)",
         yaxis_title="High-Pressure Bowling Strike Rate (Inverted: Top is faster wickets)",
@@ -244,7 +244,7 @@ def plot_bowling_scatter(bowl_df: pd.DataFrame, min_balls: int = 60) -> go.Figur
 def plot_pressure_vs_normal_comparison(row: pd.Series, is_batter: bool = True) -> go.Figure:
     """Paired bar chart comparing High-Pressure vs Normal performance for a player."""
     fig = go.Figure()
-    
+
     if is_batter:
         categories = ["Strike Rate", "Average", "Boundary %", "Dot %"]
         hp_vals = [row["hp_strike_rate"], row["hp_average"], row["hp_boundary_pct"], row["hp_dot_pct"]]
@@ -253,7 +253,7 @@ def plot_pressure_vs_normal_comparison(row: pd.Series, is_batter: bool = True) -
         categories = ["Economy Rate", "Strike Rate", "Dot %", "Boundary Conceded %"]
         hp_vals = [row["hp_economy"], row["hp_strike_rate"], row["hp_dot_pct"], row["hp_boundary_pct"]]
         norm_vals = [row["norm_economy"], row["norm_strike_rate"], row["norm_dot_pct"], row["norm_boundary_pct"]]
-        
+
     fig.add_trace(go.Bar(
         name="High Pressure (Index â‰¥ 65)",
         x=categories,
@@ -262,7 +262,7 @@ def plot_pressure_vs_normal_comparison(row: pd.Series, is_batter: bool = True) -
         text=[f"{v:.1f}" for v in hp_vals],
         textposition="outside"
     ))
-    
+
     fig.add_trace(go.Bar(
         name="Normal Match State",
         x=categories,
@@ -271,7 +271,7 @@ def plot_pressure_vs_normal_comparison(row: pd.Series, is_batter: bool = True) -
         text=[f"{v:.1f}" for v in norm_vals],
         textposition="outside"
     ))
-    
+
     fig.update_layout(
         title=dict(text=f"{row['player_name']}: Pressure vs Normal Comparison", font=dict(size=15)),
         barmode="group",
@@ -284,9 +284,9 @@ def plot_pressure_vs_normal_comparison(row: pd.Series, is_batter: bool = True) -
 def plot_player_radar(players_df: pd.DataFrame, is_batter: bool = True) -> go.Figure:
     """Interactive radar chart comparing multiple players across 5 core normalized performance axes."""
     fig = go.Figure()
-    
+
     colors = [RR_PINK, RR_ELECTRIC, RR_GOLD, RR_CYAN, "#D500F9"]
-    
+
     if is_batter:
         categories = [
             "Scoring Rate", "Survival / Avg", "Boundary Pct",
@@ -299,14 +299,14 @@ def plot_player_radar(players_df: pd.DataFrame, is_batter: bool = True) -> go.Fi
             "Clutch Delta", "Consistency"
         ]
         cols = ["sub_containment", "sub_wicket_threat", "sub_dot_suppress", "sub_clutch_delta", "sub_consistency"]
-        
+
     for i, (_, row) in enumerate(players_df.iterrows()):
         color = colors[i % len(colors)]
         values = [row.get(c, 50.0) for c in cols]
         # Close radar loop
         values_closed = values + [values[0]]
         cat_closed = categories + [categories[0]]
-        
+
         fig.add_trace(go.Scatterpolar(
             r=values_closed,
             theta=cat_closed,
@@ -315,7 +315,7 @@ def plot_player_radar(players_df: pd.DataFrame, is_batter: bool = True) -> go.Fi
             line_color=color,
             opacity=0.7
         ))
-        
+
     fig.update_layout(
         polar=dict(
             radialaxis=dict(visible=True, range=[0, 100], gridcolor=GRID_COLOR, tickfont=dict(size=9)),
@@ -331,12 +331,12 @@ def plot_phase_breakdown(df: pd.DataFrame) -> go.Figure:
     """Distribution of high-pressure deliveries by innings phase (Powerplay, Middle, Death, Super Over)."""
     phase_bat = df[df["is_high_pressure_bat"]]["phase"].value_counts().reset_index()
     phase_bat.columns = ["phase", "hp_bat_deliveries"]
-    
+
     phase_bowl = df[df["is_high_pressure_bowl"]]["phase"].value_counts().reset_index()
     phase_bowl.columns = ["phase", "hp_bowl_deliveries"]
-    
+
     merged = phase_bat.merge(phase_bowl, on="phase", how="outer").fillna(0)
-    
+
     fig = go.Figure()
     fig.add_trace(go.Bar(
         x=merged["phase"],
@@ -350,7 +350,7 @@ def plot_phase_breakdown(df: pd.DataFrame) -> go.Figure:
         name="HP Bowling Balls",
         marker_color=RR_BLUE
     ))
-    
+
     fig.update_layout(
         title=dict(text="High-Pressure Delivery Occurrence by Match Phase", font=dict(size=15)),
         barmode="group",
@@ -368,9 +368,9 @@ def plot_ipl_vs_combined_scores(
     """Grouped bar chart comparing Combined Score vs IPL Score for shortlisted players."""
     sub = dossier_df[dossier_df["category"] == category].dropna(subset=["ipl_score"]).copy()
     sub = sub.sort_values(by="ipl_score", ascending=True)
-    
+
     fig = go.Figure()
-    
+
     fig.add_trace(go.Bar(
         y=sub["player_name"],
         x=sub["comb_score"],
@@ -379,7 +379,7 @@ def plot_ipl_vs_combined_scores(
         marker_color="rgba(139, 148, 158, 0.7)",
         hovertemplate="<b>%{y}</b><br>Combined Score: %{x:.1f}<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=sub["player_name"],
         x=sub["ipl_score"],
@@ -388,7 +388,7 @@ def plot_ipl_vs_combined_scores(
         marker_color=RR_PINK if category == "Batter" else RR_BLUE,
         hovertemplate="<b>%{y}</b><br>IPL-Only Score: %{x:.1f}<extra></extra>"
     ))
-    
+
     fig.update_layout(
         title=dict(text=f"Overall vs IPL-Specific Reliability Score ({category}s)", font=dict(size=15)),
         barmode="group",
@@ -406,9 +406,9 @@ def plot_phase_allocation_stacked(
     """100% stacked bar chart showing each player's phase distribution (Powerplay, Middle, Death)."""
     sub = dossier_df[dossier_df["category"] == category].copy()
     sub = sub.sort_values(by="death_pct", ascending=True)
-    
+
     fig = go.Figure()
-    
+
     fig.add_trace(go.Bar(
         y=sub["player_name"],
         x=sub["powerplay_pct"],
@@ -417,7 +417,7 @@ def plot_phase_allocation_stacked(
         marker_color="#2ECC71",
         hovertemplate="<b>%{y}</b><br>Powerplay: %{x:.1f}%<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=sub["player_name"],
         x=sub["middle_pct"],
@@ -426,7 +426,7 @@ def plot_phase_allocation_stacked(
         marker_color="#F39C12",
         hovertemplate="<b>%{y}</b><br>Middle: %{x:.1f}%<extra></extra>"
     ))
-    
+
     fig.add_trace(go.Bar(
         y=sub["player_name"],
         x=sub["death_pct"],
@@ -435,7 +435,7 @@ def plot_phase_allocation_stacked(
         marker_color=RR_PINK if category == "Batter" else RR_BLUE,
         hovertemplate="<b>%{y}</b><br>Death: %{x:.1f}%<extra></extra>"
     ))
-    
+
     fig.update_layout(
         title=dict(text=f"Phase Concentration in High-Pressure Deliveries ({category}s)", font=dict(size=15)),
         barmode="stack",
@@ -453,12 +453,12 @@ def plot_single_player_split(
 ) -> go.Figure:
     """Side-by-side grouped bar chart comparing IPL vs T20I for a single player."""
     categories = ["IPL", "T20I", "Combined"]
-    
+
     if is_batter:
         srs = [splits[c].get("hp_sr", 0.0) for c in categories]
         avgs = [splits[c].get("hp_avg", 0.0) for c in categories]
         balls = [splits[c].get("hp_balls", 0) for c in categories]
-        
+
         fig = go.Figure()
         fig.add_trace(go.Bar(
             x=categories,
@@ -476,7 +476,7 @@ def plot_single_player_split(
             text=[f"{v:.1f}" if v > 0 else "N/A" for v in avgs],
             textposition="auto"
         ))
-        
+
         fig.update_layout(
             title=dict(text=f"{player_name} â€” Competition Performance Breakdown (HP)", font=dict(size=15)),
             barmode="group",
@@ -486,7 +486,7 @@ def plot_single_player_split(
     else:
         econs = [splits[c].get("hp_economy", 0.0) for c in categories]
         wkts = [splits[c].get("hp_wickets", 0) for c in categories]
-        
+
         fig = go.Figure()
         fig.add_trace(go.Bar(
             x=categories,
@@ -504,14 +504,14 @@ def plot_single_player_split(
             text=[f"{v}" if v > 0 else "0" for v in wkts],
             textposition="auto"
         ))
-        
+
         fig.update_layout(
             title=dict(text=f"{player_name} — Competition Performance Breakdown (HP)", font=dict(size=15)),
             barmode="group",
             yaxis_title="Metric Value",
             height=340
         )
-        
+
     return apply_rr_theme(fig)
 
 
@@ -521,12 +521,12 @@ def plot_role_distribution(dossier_df: pd.DataFrame) -> go.Figure:
         fig = go.Figure()
         fig.add_annotation(text="No role data available", showarrow=False, font=dict(color=RR_MUTED, size=14))
         return apply_rr_theme(fig)
-        
+
     role_counts = dossier_df["primary_role"].value_counts().reset_index()
     role_counts.columns = ["Role", "Count"]
-    
+
     colors = [RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, RR_BLUE, RR_CYAN, RR_PURPLE]
-    
+
     fig = go.Figure(go.Pie(
         labels=role_counts["Role"],
         values=role_counts["Count"],
@@ -536,14 +536,14 @@ def plot_role_distribution(dossier_df: pd.DataFrame) -> go.Figure:
         textfont=dict(size=11, color=RR_WHITE),
         hovertemplate="<b>%{label}</b><br/>Players: %{value}<br/>Share: %{percent}<extra></extra>"
     ))
-    
+
     fig.add_annotation(
         text=f"<b>{len(dossier_df)}</b><br/><span style='font-size:10px; color:{RR_MUTED};'>Shortlisted</span>",
         x=0.5, y=0.5,
         font=dict(size=14, color=RR_WHITE),
         showarrow=False
     )
-    
+
     fig.update_layout(
         title=dict(text="Candidate Cohort by Tactical Role", font=dict(size=14, color=RR_WHITE)),
         showlegend=True,
@@ -564,29 +564,29 @@ def plot_phase_comparison_grouped(
         fig = go.Figure()
         fig.add_annotation(text="Select players to generate phase comparison", showarrow=False, font=dict(color=RR_MUTED, size=14))
         return apply_rr_theme(fig)
-        
+
     p_col = "striker_name" if is_batter else "bowler_name"
     pressure_col = "is_high_pressure_bat" if is_batter else "is_high_pressure_bowl"
     runs_col = "runs_batter" if is_batter else "runs_bowler"
     opp_col = "is_ball_faced_batter" if is_batter else "is_legal_ball_bowler"
-    
+
     sub = deliv_df[(deliv_df[p_col].isin(player_names)) & (deliv_df[pressure_col])].copy()
     if sub.empty:
         # Fallback to all deliveries if high-pressure sample is small
         sub = deliv_df[deliv_df[p_col].isin(player_names)].copy()
-        
+
     agg = sub.groupby([p_col, "phase"]).agg(
         runs=(runs_col, "sum"),
         balls=(opp_col, "sum")
     ).reset_index()
-    
+
     if is_batter:
         agg["metric"] = np.where(agg["balls"] > 0, (agg["runs"] / agg["balls"]) * 100.0, 0.0)
         y_title = "Strike Rate"
     else:
         agg["metric"] = np.where(agg["balls"] > 0, agg["runs"] / (agg["balls"] / 6.0), 0.0)
         y_title = "Economy (RPO)"
-        
+
     fig = px.bar(
         agg,
         x="phase",
@@ -597,7 +597,7 @@ def plot_phase_comparison_grouped(
         color_discrete_sequence=[RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, RR_CYAN],
         labels={"phase": "Match Phase", "metric": y_title, p_col: "Player"}
     )
-    
+
     fig.update_layout(
         title=dict(text=f"Phase-by-Phase High-Pressure Performance ({y_title})", font=dict(size=14, color=RR_WHITE)),
         height=380,
@@ -617,10 +617,10 @@ def plot_metric_distribution_box(
         fig = go.Figure()
         fig.add_annotation(text="No metric data available", showarrow=False, font=dict(color=RR_MUTED, size=14))
         return apply_rr_theme(fig)
-        
+
     color = RR_PINK if is_batter else RR_ELECTRIC
     fig = go.Figure()
-    
+
     fig.add_trace(go.Box(
         y=df[metric_col],
         name="Cohort Distribution",
@@ -628,7 +628,7 @@ def plot_metric_distribution_box(
         boxpoints="outliers",
         line_width=2
     ))
-    
+
     fig.update_layout(
         title=dict(text=title, font=dict(size=14, color=RR_WHITE)),
         yaxis_title=metric_col.replace("_", " ").title(),
@@ -647,19 +647,19 @@ def plot_squad_budget_chart(
         fig = go.Figure()
         fig.add_annotation(text="No players drafted yet. Add players to view budget allocation.", showarrow=False, font=dict(color=RR_MUTED, size=14))
         return apply_rr_theme(fig)
-        
+
     df = pd.DataFrame(squad_players)
     if "bid_cr" not in df.columns:
         df["bid_cr"] = 0.0
-        
+
     role_spent = df.groupby("role")["bid_cr"].sum().reset_index()
     total_spent = role_spent["bid_cr"].sum()
     remaining = max(0.0, total_purse - total_spent)
-    
+
     labels = role_spent["role"].tolist() + ["Remaining Purse"]
     values = role_spent["bid_cr"].tolist() + [remaining]
     colors = [RR_PINK, RR_ELECTRIC, RR_GOLD, RR_GREEN, "#1D2B52"]
-    
+
     fig = go.Figure(go.Pie(
         labels=labels,
         values=values,
@@ -669,14 +669,14 @@ def plot_squad_budget_chart(
         textfont=dict(size=11, color=RR_WHITE),
         hovertemplate="<b>%{label}</b><br/>Allocation: ₹%{value:.2f} Cr<br/>Share: %{percent}<extra></extra>"
     ))
-    
+
     fig.add_annotation(
         text=f"<b>₹{total_spent:.1f} Cr</b><br/><span style='font-size:10px; color:{RR_MUTED};'>Spent / ₹{total_purse:.0f} Cr</span>",
         x=0.5, y=0.5,
         font=dict(size=13, color=RR_WHITE),
         showarrow=False
     )
-    
+
     fig.update_layout(
         title=dict(text="Purse Allocation by Tactical Role", font=dict(size=14, color=RR_WHITE)),
         showlegend=True,
@@ -685,5 +685,3 @@ def plot_squad_budget_chart(
         margin=dict(l=30, r=30, t=40, b=40)
     )
     return apply_rr_theme(fig)
-
-

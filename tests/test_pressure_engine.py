@@ -33,7 +33,7 @@ def test_pressure_boundaries(mock_chase_deliveries):
     """Verify pressure indices stay strictly within [0.0, 100.0] boundaries."""
     bat_p = compute_batting_pressure(mock_chase_deliveries)
     bowl_p = compute_bowling_pressure(mock_chase_deliveries)
-    
+
     assert bat_p.min() >= 0.0
     assert bat_p.max() <= 100.0
     assert bowl_p.min() >= 0.0

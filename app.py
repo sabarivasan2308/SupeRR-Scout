@@ -110,7 +110,7 @@ col_left, col_right = st.columns([1.1, 0.9])
 with col_left:
     st.markdown("### 🏆 Top 5 Clutch Batters & Bowlers")
     tab_bat, tab_bowl = st.tabs(["Top Batters under Pressure", "Top Bowlers under Pressure"])
-    
+
     with tab_bat:
         if not top_10_batters.empty:
             st.plotly_chart(
@@ -121,7 +121,7 @@ with col_left:
             disp_bat = top_10_batters.head(5)[["rank", "player_name", "reliability_score", "hp_runs", "hp_strike_rate", "hp_average", "sr_delta"]]
             disp_bat.columns = ["Rank", "Player", "Score", "HP Runs", "HP SR", "HP Avg", "SR Delta"]
             st.dataframe(disp_bat, use_container_width=True, hide_index=True)
-            
+
     with tab_bowl:
         if not top_10_bowlers.empty:
             st.plotly_chart(
@@ -138,7 +138,7 @@ with col_right:
         plot_pressure_distribution(filtered_df, threshold=filters["pressure_threshold"]),
         use_container_width=True
     )
-    
+
     st.markdown("""
     <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 16px 20px; box-shadow: 0 4px 14px rgba(8,13,32,0.6);">
         <div style="font-weight: 700; color: #E6007E; font-size: 13px; margin-bottom: 6px; letter-spacing: 0.5px;">
@@ -214,3 +214,16 @@ with exp_c4:
         mime="application/pdf",
         use_container_width=True
     )
+
+
+# Vercel serverless function entrypoint compatibility
+def handler(request=None, response=None):
+    """Fallback entrypoint for serverless runtimes (e.g. Vercel)."""
+    return {
+        "statusCode": 200,
+        "headers": {"Content-Type": "text/html"},
+        "body": "<h1>SupeRR SCOUT</h1><p>Live platform running. Please visit the web portal.</p>"
+    }
+
+app = handler
+application = handler

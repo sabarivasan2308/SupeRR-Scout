@@ -36,7 +36,7 @@ def build_pbi_leaderboard_chart(
     if "rank" not in df.columns:
         df = df.sort_values("reliability_score", ascending=False).reset_index(drop=True)
         df["rank"] = df.index + 1
-        
+
     if "is_eligible" in df.columns:
         eligible = df[df["is_eligible"]].head(top_n).copy()
         if eligible.empty:
@@ -44,14 +44,14 @@ def build_pbi_leaderboard_chart(
     else:
         # Pre-ranked dataframe already containing eligible entries
         eligible = df.head(top_n).copy()
-        
+
     # Sort ascending for horizontal bar chart (top rank on top)
     eligible = eligible.sort_values("reliability_score", ascending=True).reset_index(drop=True)
-    
+
     # Setup bar colors: accent selected player if active
     bar_colors = []
     base_color = RR_PINK if is_batter else RR_ELECTRIC
-    
+
     for p in eligible["player_name"]:
         if selected_player and p == selected_player:
             bar_colors.append(RR_GOLD)  # Bright gold for selected player
@@ -59,7 +59,7 @@ def build_pbi_leaderboard_chart(
             bar_colors.append("rgba(230, 0, 126, 0.40)" if is_batter else "rgba(40, 123, 255, 0.40)")
         else:
             bar_colors.append(base_color)
-            
+
     # Text labels
     opp_col = "hp_balls" if is_batter else "hp_legal_balls"
     if opp_col not in eligible.columns:
@@ -73,7 +73,7 @@ def build_pbi_leaderboard_chart(
         f"<b>{score:.1f}</b> <span style='font-size:10px; color:{RR_MUTED};'>({int(b)}b)</span>"
         for score, b in zip(eligible["reliability_score"], eligible[opp_col])
     ]
-    
+
     sr_or_econ = eligible["hp_strike_rate"] if (is_batter and "hp_strike_rate" in eligible.columns) else (
         eligible["hp_economy"] if ("hp_economy" in eligible.columns) else np.zeros(len(eligible))
     )
@@ -89,7 +89,7 @@ def build_pbi_leaderboard_chart(
         ci_low,
         ci_upp
     ), axis=-1)
-    
+
     fig = go.Figure(go.Bar(
         x=eligible["reliability_score"],
         y=eligible["player_name"],
@@ -113,12 +113,12 @@ def build_pbi_leaderboard_chart(
             + "<extra></extra>"
         )
     ))
-    
+
     # Highlight badge in title if player is focused
     title_text = f"Top {len(eligible)} {'Batters' if is_batter else 'Bowlers'} by Reliability Score"
     if selected_player:
         title_text += f" <span style='color:{RR_GOLD}; font-size:12px;'>[★ Focusing: {selected_player}]</span>"
-        
+
     fig.update_layout(
         title=dict(text=title_text, font=dict(size=14, color=RR_WHITE)),
         xaxis=dict(title="Composite Reliability Score (0–100)", range=[0, 105]),
@@ -151,7 +151,7 @@ def build_pbi_scatter_chart(
     x_col = "hp_balls" if is_batter else "hp_legal_balls"
     y_col = "hp_strike_rate" if is_batter else "hp_economy"
     size_col = "hp_runs" if is_batter else "hp_wickets"
-    
+
     # Custom hover formatting
     custom_data = np.stack((
         eligible["player_name"],
@@ -256,7 +256,7 @@ def build_pbi_heatmap_chart(
     """
     bins = [0, 50, 65, 75, 85, 100.1]
     labels = ["Low (<50)", "Moderate (50-64)", "High (65-74)", "Very High (75-84)", "Extreme (85+)"]
-    
+
     # Choose players to display
     top_players = ranked_df.head(top_n)["player_name"].tolist() if not ranked_df.empty else []
     if selected_player and selected_player not in top_players:
@@ -273,7 +273,7 @@ def build_pbi_heatmap_chart(
 
     player_col = "striker_name" if is_batter else "bowler_name"
     pressure_col = "pressure_batting" if is_batter else "pressure_bowling"
-    
+
     sub = deliv_df[deliv_df[player_col].isin(top_players)].copy()
     if sub.empty:
         fig = go.Figure()
@@ -309,7 +309,7 @@ def build_pbi_heatmap_chart(
     # Build annotations text and hover info
     text_matrix = []
     hover_matrix = []
-    
+
     # Pre-aggregate balls for hover
     balls_pivot = heat_data.pivot(index=player_col, columns="band", values="balls").reindex(index=top_players[::-1], columns=labels).fillna(0)
     runs_pivot = heat_data.pivot(index=player_col, columns="band", values="runs").reindex(index=top_players[::-1], columns=labels).fillna(0)
@@ -321,7 +321,7 @@ def build_pbi_heatmap_chart(
             val = pivot.loc[p, b] if p in pivot.index and b in pivot.columns else np.nan
             balls = balls_pivot.loc[p, b] if p in balls_pivot.index and b in balls_pivot.columns else 0
             runs = runs_pivot.loc[p, b] if p in runs_pivot.index and b in runs_pivot.columns else 0
-            
+
             if pd.isna(val):
                 text_row.append("—")
                 hover_row.append(f"<b>{p}</b><br/>Band: {b}<br/>Deliveries: 0 (No sample)<extra></extra>")
@@ -376,12 +376,12 @@ def build_pbi_comp_comparison_chart(
     pressure_col = "is_high_pressure_bat" if is_batter else "is_high_pressure_bowl"
     runs_col = "runs_batter" if is_batter else "runs_bowler"
     opp_col = "is_ball_faced_batter" if is_batter else "is_legal_ball_bowler"
-    
+
     comp_metrics = deliv_df.groupby(["competition_type", pressure_col]).agg(
         runs=(runs_col, "sum"),
         balls=(opp_col, "sum")
     ).reset_index()
-    
+
     if comp_metrics.empty:
         fig = go.Figure()
         fig.add_annotation(text="No competition data available", showarrow=False, font=dict(color=RR_MUTED, size=14))
@@ -395,9 +395,9 @@ def build_pbi_comp_comparison_chart(
         comp_metrics["metric_val"] = comp_metrics["runs"] / (comp_metrics["balls"] / 6.0)
         y_title = "Bowling Economy (RPO)"
         val_format = "{:.2f}"
-        
+
     comp_metrics["situation"] = np.where(comp_metrics[pressure_col], "High Pressure (≥65)", "Normal (<65)")
-    
+
     fig = px.bar(
         comp_metrics,
         x="competition_type",
@@ -410,7 +410,7 @@ def build_pbi_comp_comparison_chart(
         },
         hover_data={"runs": True, "balls": True, "metric_val": ":.2f"}
     )
-    
+
     fig.update_layout(
         title=dict(text=f"Competition Comparison ({y_title} by Match State)", font=dict(size=14, color=RR_WHITE)),
         xaxis=dict(title="Competition Scope"),
@@ -440,7 +440,7 @@ def build_pbi_distribution_chart(
     """
     pressure_col = "is_high_pressure_bat" if is_batter else "is_high_pressure_bowl"
     hp_df = deliv_df[deliv_df[pressure_col]].copy()
-    
+
     if hp_df.empty:
         fig = go.Figure()
         fig.add_annotation(text="No high pressure deliveries in slice", showarrow=False, font=dict(color=RR_MUTED, size=14))
@@ -448,14 +448,14 @@ def build_pbi_distribution_chart(
 
     phase_counts = hp_df["phase"].value_counts().reset_index()
     phase_counts.columns = ["Phase", "Deliveries"]
-    
+
     color_map = {
         "Death": RR_PINK,
         "Middle": RR_ELECTRIC,
         "Powerplay": RR_BLUE,
         "Super Over": RR_GOLD
     }
-    
+
     fig = go.Figure(go.Pie(
         labels=phase_counts["Phase"],
         values=phase_counts["Deliveries"],
@@ -468,14 +468,14 @@ def build_pbi_distribution_chart(
         textfont=dict(size=11, color=RR_WHITE),
         hovertemplate="<b>%{label}</b><br/>High-Pressure Deliveries: %{value:,}<br/>Share: %{percent}<extra></extra>"
     ))
-    
+
     fig.add_annotation(
         text=f"<b>{len(hp_df):,}</b><br/><span style='font-size:10px; color:{RR_MUTED};'>HP Balls</span>",
         x=0.5, y=0.5,
         font=dict(size=14, color=RR_WHITE),
         showarrow=False
     )
-    
+
     fig.update_layout(
         title=dict(text="High-Pressure Phase Allocation (Match Distribution)", font=dict(size=14, color=RR_WHITE)),
         showlegend=True,
@@ -505,7 +505,7 @@ def build_pbi_season_trends_chart(
     pressure_col = "is_high_pressure_bat" if is_batter else "is_high_pressure_bowl"
     runs_col = "runs_batter" if is_batter else "runs_bowler"
     opp_col = "is_ball_faced_batter" if is_batter else "is_legal_ball_bowler"
-    
+
     hp_deliv = deliv_df[deliv_df[pressure_col]].copy()
     if hp_deliv.empty:
         fig = go.Figure()
@@ -517,7 +517,7 @@ def build_pbi_season_trends_chart(
         runs=(runs_col, "sum"),
         balls=(opp_col, "sum")
     ).reset_index()
-    
+
     if is_batter:
         cohort_trend["val"] = (cohort_trend["runs"] / cohort_trend["balls"]) * 100.0
         y_title = "High-Pressure Strike Rate"
@@ -526,9 +526,9 @@ def build_pbi_season_trends_chart(
         cohort_trend["val"] = cohort_trend["runs"] / (cohort_trend["balls"] / 6.0)
         y_title = "High-Pressure Economy (RPO)"
         val_format = "{:.2f}"
-        
+
     fig = go.Figure()
-    
+
     # Cohort Benchmark line
     fig.add_trace(go.Scatter(
         x=cohort_trend["season"],
@@ -539,23 +539,23 @@ def build_pbi_season_trends_chart(
         marker=dict(size=7, color=RR_ELECTRIC),
         hovertemplate="<b>Cohort Baseline (%{x})</b><br/>" + y_title + ": <b>%{y:.2f}</b><extra></extra>"
     ))
-    
+
     # 2. Selected player trend line if active
     if selected_player:
         player_col = "striker_name" if is_batter else "bowler_name"
         p_sub = hp_deliv[hp_deliv[player_col] == selected_player]
-        
+
         if not p_sub.empty:
             p_trend = p_sub.groupby("season").agg(
                 runs=(runs_col, "sum"),
                 balls=(opp_col, "sum")
             ).reset_index()
-            
+
             if is_batter:
                 p_trend["val"] = (p_trend["runs"] / p_trend["balls"]) * 100.0
             else:
                 p_trend["val"] = p_trend["runs"] / (p_trend["balls"] / 6.0)
-                
+
             fig.add_trace(go.Scatter(
                 x=p_trend["season"],
                 y=p_trend["val"],
@@ -592,7 +592,7 @@ def build_player_spotlight_card_html(player_row: pd.Series, is_batter: bool = Tr
     score = player_row.get("reliability_score", 0.0)
     ci_lower = player_row.get("ci_lower", 0.0)
     ci_upper = player_row.get("ci_upper", 0.0)
-    
+
     if is_batter:
         balls = player_row.get("hp_balls", 0)
         runs = player_row.get("hp_runs", 0)
@@ -615,8 +615,8 @@ def build_player_spotlight_card_html(player_row: pd.Series, is_batter: bool = Tr
         accent_color = RR_ELECTRIC
 
     return f"""
-    <div style="background: linear-gradient(135deg, rgba(230,0,126,0.14) 0%, rgba(23,70,162,0.22) 100%); 
-                border: 1px solid rgba(230,0,126,0.40); border-left: 5px solid {accent_color}; 
+    <div style="background: linear-gradient(135deg, rgba(230,0,126,0.14) 0%, rgba(23,70,162,0.22) 100%);
+                border: 1px solid rgba(230,0,126,0.40); border-left: 5px solid {accent_color};
                 border-radius: 12px; padding: 16px 22px; margin-bottom: 20px; box-shadow: 0 4px 20px rgba(8,13,32,0.8);">
         <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;">
             <div>
@@ -655,12 +655,12 @@ def generate_executive_insights(
     eligible = active_ranked[active_ranked.get("is_eligible", True)] if "is_eligible" in active_ranked.columns else active_ranked
     if eligible.empty:
         eligible = active_ranked
-        
+
     if not eligible.empty:
         top_player = eligible.iloc[0]
         p_name = top_player["player_name"]
         score = top_player["reliability_score"]
-        
+
         if is_batter:
             sr = top_player.get("hp_strike_rate", 0.0)
             avg = top_player.get("hp_average", 0.0)
@@ -698,6 +698,5 @@ def generate_executive_insights(
             insights.append(
                 f"<b>Phase Concentration:</b> <b>{death_pct:.1f}%</b> of all high-pressure deliveries in this slice occur during Death overs (17–20), highlighting the tactical importance of death-overs specialists."
             )
-            
-    return insights
 
+    return insights

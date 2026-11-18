@@ -90,7 +90,7 @@ with m1:
     st.markdown("### 1. Delivery-Level Pressure Index Formulations")
     st.markdown("""
     Pressure is computed separately for batting and bowling as a continuous value between 0.0 and 100.0 for every legal delivery.
-    
+
     #### A. Batting Chase Pressure (Innings 2)
     In run chases, pressure is driven by the arithmetic challenge of reaching the target:
     """)
@@ -102,7 +102,7 @@ with m1:
     - **$S_{\text{stage}}$**: Innings progression fraction over scheduled 120 balls: $\frac{b}{120} \times 100$.
     - **$L_{\text{closeness}}$**: Match leverage index based on proximity to target and resources remaining.
     - **Knockout Boost**: Multiplied by $1.08\times$ in playoff/knockout matches (capped at 100).
-    
+
     #### B. Batting First-Innings Pressure (Innings 1)
     In the first innings where no fixed target exists, pressure stems from collapse crises and death-over scoring demands:
     """)
@@ -112,7 +112,7 @@ with m1:
     - **$W_{\text{crisis}}$**: Wickets lost ahead of the empirical over-by-over progression curve.
     - **$S_{\text{phase}}$**: Innings stage urgency (Powerplay: 25-40, Middle: 40-65, Death: 70-100).
     - **$R_{\text{deficit}}$**: Deficit of current run rate against competition par (IPL 9.25 RPO, T20I 8.30 RPO).
-    
+
     #### C. Bowling Pressure Index
     For bowlers, pressure represents the difficulty and margin of error in defending against the opposition:
     """)
@@ -126,7 +126,7 @@ with m1:
 
     st.markdown("---")
     st.markdown("### 2. Multi-Factor Reliability Score Architecture (0–100)")
-    
+
     col_w_b, col_w_bw = st.columns(2)
     with col_w_b:
         st.markdown("#### Batting Score Weights")
@@ -161,7 +161,7 @@ with m1:
 with m2:
     st.markdown("### 🔄 End-to-End Analytics Workflow Pipeline")
     st.caption("Visual architecture representing the six computational transformation stages from raw deliveries to franchise recruitment dossiers.")
-    
+
     stages = get_pipeline_stages()
     for s in stages:
         st.markdown(f"""
@@ -178,7 +178,7 @@ with m2:
 with m3:
     st.markdown("### 📊 Interactive Bayesian Shrinkage & Uncertainty Simulator")
     st.caption("Explore how Empirical Bayes protects leaderboards against small-sample noise and calculates 95% Confidence Intervals.")
-    
+
     # Interactive Sandbox Slider
     st.markdown("""
     <div style="background: #111A32; border: 1px solid #1D2B52; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px;">
@@ -186,11 +186,11 @@ with m3:
         <span style="font-size: 12px; color: #A8B3CC;">Test any sample size to observe real-time shrinkage weights and margin-of-error narrowing:</span>
     </div>
     """, unsafe_allow_html=True)
-    
+
     sandbox_n = st.slider("Select Sample Size (High-Pressure Deliveries):", min_value=10, max_value=300, value=75, step=5, key="sandbox_n_slider")
     sandbox_w = (sandbox_n / (sandbox_n + 50.0)) * 100.0
     sandbox_ci = 1.96 * (16.0 / np.sqrt(sandbox_n / 25.0))
-    
+
     sb1, sb2, sb3 = st.columns(3)
     with sb1:
         st.metric("Sample Size", f"{sandbox_n} balls", help="Observed deliveries under match pressure ≥ 65.0")
@@ -198,15 +198,15 @@ with m3:
         st.metric("Data Credibility Weight (w_i)", f"{sandbox_w:.1f}%", help="Weight given to observed player stats vs prior baseline (K=50)")
     with sb3:
         st.metric("95% CI Margin of Error", f"± {sandbox_ci:.1f} pts", help="Asymptotic propagation uncertainty interval")
-        
+
     st.markdown("<br/>", unsafe_allow_html=True)
-    
+
     col_sim_l, col_sim_r = st.columns(2)
-    
+
     # 1. Shrinkage Credibility Curve
     n_range = np.linspace(10, 300, 100)
     w_range = n_range / (n_range + 50.0)
-    
+
     df_sim_cred = pd.DataFrame({"HP Deliveries": n_range, "Sample Credibility Weight (%)": w_range * 100.0})
     fig_cred = px.line(
         df_sim_cred, x="HP Deliveries", y="Sample Credibility Weight (%)",
@@ -215,14 +215,14 @@ with m3:
     fig_cred.add_vline(x=60, line_dash="dash", line_color=RR_GOLD, annotation_text="Min Cutoff (60b = 54.5%)")
     fig_cred.add_vline(x=200, line_dash="dash", line_color=RR_PINK, annotation_text="High Credibility (200b = 80.0%)")
     fig_cred.update_traces(line=dict(color=RR_PINK, width=3))
-    
+
     with col_sim_l:
         st.plotly_chart(apply_rr_theme(fig_cred), use_container_width=True)
-        
+
     # 2. Confidence Interval Margin of Error curve
     ci_margin = 1.96 * (16.0 / np.sqrt(n_range / 25.0))
     df_sim_ci = pd.DataFrame({"HP Deliveries": n_range, "Margin of Error (± pts)": ci_margin})
-    
+
     fig_ci = px.line(
         df_sim_ci, x="HP Deliveries", y="Margin of Error (± pts)",
         title="95% Confidence Interval Width (Uncertainty Narrowing)"
@@ -230,14 +230,14 @@ with m3:
     fig_ci.update_traces(line=dict(color=RR_ELECTRIC, width=3))
     fig_ci.add_hline(y=10.0, line_dash="dot", line_color=RR_MUTED, annotation_text="High Uncertainty (>10 pts)")
     fig_ci.add_hline(y=4.5, line_dash="dot", line_color=RR_GREEN, annotation_text="Tight Precision (<4.5 pts)")
-    
+
     with col_sim_r:
         st.plotly_chart(apply_rr_theme(fig_ci), use_container_width=True)
 
 with m4:
     st.markdown("### 📖 Formal Data Dictionary & Methodology Glossary")
     st.caption("Complete technical specifications of operational features and scientific terminology.")
-    
+
     sub_dict_tab, sub_gloss_tab = st.tabs(["📋 Data Dictionary", "📚 Analytical Glossary"])
     with sub_dict_tab:
         dict_df = get_data_dictionary()
@@ -245,7 +245,7 @@ with m4:
         if search_feat.strip():
             dict_df = dict_df[dict_df["Feature"].str.contains(search_feat.strip(), case=False, na=False)]
         st.dataframe(dict_df, use_container_width=True, hide_index=True)
-        
+
     with sub_gloss_tab:
         glossary = get_methodology_glossary()
         for g in glossary:
@@ -256,23 +256,23 @@ with m5:
     st.markdown("### 🛡️ Statistical Defenses & Limitations")
     st.markdown("""
     #### 1. Why Aggregate Averages Fail Under Pressure
-    Traditional cricket analytics rely on raw averages and strike rates across all deliveries. This treats a boundary hit in the 3rd over of a relaxed league match identically to a six needed off the final ball of a tournament semi-final. 
+    Traditional cricket analytics rely on raw averages and strike rates across all deliveries. This treats a boundary hit in the 3rd over of a relaxed league match identically to a six needed off the final ball of a tournament semi-final.
     Our pressure model partitions performance based on verified match context, revealing that players who appear dominant in low-pressure conditions frequently dip when pressure exceeds index 65.
-    
+
     #### 2. Separation of Individual Performance from Team Match Outcomes
-    A batter can play a heroic 48 off 22 balls under extreme pressure only for their team to lose by 1 run due to bowling concessions. 
+    A batter can play a heroic 48 off 22 balls under extreme pressure only for their team to lose by 1 run due to bowling concessions.
     Our system evaluates delivery-level execution independently of team win/loss outcomes, preventing unfair penalties on individual excellence.
-    
+
     #### 3. Strict Bowling Attribution Rules
     - **No Byes or Leg-byes:** Conceded byes and leg-byes are excluded from the bowler's runs conceded, complying strictly with MCC Law 21 and official ICC playing conditions.
     - **Illegal Balls Handled Accurately:** Wides and no-balls are counted towards runs conceded and bowler stress, but are NOT counted as legal balls in over completion calculations.
     - **Dismissal Verification:** Only Caught, Bowled, LBW, Stumped, and Hit Wicket dismissals are credited as bowler wickets; run-outs and retired-outs are excluded.
-    
+
     #### 4. Known Analytical Limitations
     - **Drop-in Pitches & Dew Factor:** Ground-level moisture and pitch deterioration are not explicitly coded in the raw CSV feeds; par run rates are normalized at the competition level.
     - **Batting Order Shifts:** Players used as makeshift pinch-hitters or floater resources can experience sudden shifts in situational exposure.
     - **Opposition Bowling Quality:** While competition type (IPL vs T20I) is accounted for, bowler-quality weighting per individual delivery is not applied to preserve computational reproducibility.
-    
+
     #### 5. Dataset Scope & Tournament Segregation
     - **Combined Rankings:** Use all **200,999 deliveries** from the supplied archive (883 matches), including IPL (371 matches, 87,687 deliveries), T20I (482 matches, 106,327 deliveries), and the 30 Emerging Teams Asia Cup / Asia Cup Rising Stars matches (6,985 deliveries).
     - **IPL-Only Rankings:** Use strictly **87,687 IPL deliveries** across **371 matches** (IPL 2022–2026), isolating domestic franchise conditions.

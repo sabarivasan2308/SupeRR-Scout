@@ -54,7 +54,7 @@ st.markdown("""
 # ==================== 2. PERSISTENT SLICER & PRESET BAR ====================
 with st.container():
     st.markdown("""
-    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #1746A2; 
+    <div style="background: #111A32; border: 1px solid #1D2B52; border-top: 3px solid #1746A2;
                 border-radius: 12px 12px 0 0; padding: 12px 20px; margin-bottom: 0;">
         <div style="font-size: 13px; font-weight: 800; color: #F7F8FC; letter-spacing: 0.8px;">
             🎛️ COMPARISON CONFIGURATOR & CANDIDATE SELECTOR
@@ -106,7 +106,7 @@ else:
     # ==================== 3. FOUR DYNAMIC TACTICAL VERDICT CARDS ====================
     st.markdown("### 🔍 Head-to-Head Tactical Verdict")
     best_overall = compare_df.sort_values("reliability_score", ascending=False).iloc[0]
-    
+
     if is_batter:
         best_sr = compare_df.sort_values("hp_strike_rate", ascending=False).iloc[0]
         best_avg = compare_df.sort_values("hp_average", ascending=False).iloc[0]
@@ -216,7 +216,7 @@ else:
             metric_options = ["hp_economy", "hp_strike_rate", "hp_wickets", "hp_dot_pct", "econ_delta", "consistency_score"]
             metric_labels = {"hp_economy": "HP Economy (RPO)", "hp_strike_rate": "Bowling SR", "hp_wickets": "HP Wickets", "hp_dot_pct": "Dot Ball %", "econ_delta": "Clutch Delta (Δ Econ)", "consistency_score": "Consistency Score"}
             default_metrics = ["hp_economy", "hp_strike_rate"]
-            
+
         chosen_metrics = st.multiselect(
             "Select Metrics to Plot:",
             options=metric_options,
@@ -226,7 +226,7 @@ else:
         )
         if not chosen_metrics:
             chosen_metrics = default_metrics
-            
+
         metric_comp = compare_df[["player_name"] + chosen_metrics].copy()
         fig_cmp = px.bar(
             metric_comp,
@@ -240,7 +240,7 @@ else:
         st.plotly_chart(apply_rr_theme(fig_cmp), use_container_width=True)
 
     st.markdown("<br/>", unsafe_allow_html=True)
-    
+
     # ==================== PHASE-BY-PHASE BREAKDOWN ====================
     st.markdown("#### ⏱️ Phase-Wise Execution Comparison (Powerplay, Middle, Death)")
     fig_phases = plot_phase_comparison_grouped(filtered_df, selected_players, is_batter=is_batter)

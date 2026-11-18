@@ -50,13 +50,13 @@ def compute_batting_pressure(
 ) -> pd.Series:
     """
     Compute Batting Pressure Index (0-100) for every delivery.
-    
+
     In a Chase (2nd Innings):
     - Run Rate Demand: Scaled from required run rate (RRR) relative to par.
     - Wickets Remaining: Inversely related to wickets in hand (fewer wickets = higher pressure).
     - Innings Stage: Progressive urgency as deliveries run down.
     - Match Closeness: Peak pressure occurs when the target is within touch and balance is on a knife-edge.
-    
+
     In 1st Innings:
     - Wickets Lost: Wickets down relative to expected phase baseline (collapse crisis).
     - Innings Stage: Acceleration pressure in death overs (overs 16-20).
@@ -68,28 +68,28 @@ def compute_batting_pressure(
     rrr_demand = np.clip((rrr - 4.0) / (14.0 - 4.0) * 80.0 + 10.0, 0.0, 100.0)
     rrr_demand = np.where(rrr >= 14.0, np.clip(90.0 + (rrr - 14.0) * 2.0, 90.0, 100.0), rrr_demand)
     rrr_demand = np.where(rrr <= 3.0, 5.0, rrr_demand)
-    
+
     # B. Wickets Remaining Factor (0-100)
     w_lost = df["cum_innings_wickets"]
     w_pressure = np.clip((w_lost / 9.0) ** 1.15 * 100.0, 5.0, 100.0)
-    
+
     # C. Innings Stage Urgency (0-100)
     stage_urgency = np.clip(df["innings_progress"] * 100.0, 10.0, 100.0)
-    
+
     # D. Match Closeness Factor (0-100)
     closeness = df["match_closeness"].fillna(50.0)
-    
+
     chase_pressure = (
         chase_weights["run_rate_demand"] * rrr_demand +
         chase_weights["wickets_remaining"] * w_pressure +
         chase_weights["innings_stage"] * stage_urgency +
         chase_weights["match_closeness"] * closeness
     )
-    
+
     # ---------------- 2. First Innings Batting Pressure ----------------
     # A. Wickets Lost Crisis (0-100)
     w_crisis = df["wicket_crisis_index"].fillna(30.0)
-    
+
     # B. Stage Urgency in 1st Innings
     overs = df["overid"]
     stage_1st = np.where(
@@ -101,7 +101,7 @@ def compute_batting_pressure(
             65.0 + ((overs - 15) / 5.0) * 35.0
         )
     )
-    
+
     # C. Scoring Demand: Par gap
     crr = df["current_run_rate"].fillna(0)
     par_rr = df["par_run_rate"].fillna(8.5)
@@ -111,24 +111,24 @@ def compute_batting_pressure(
         np.clip(50.0 + rr_gap * 12.0, 10.0, 100.0),
         35.0
     )
-    
+
     first_inn_pressure = (
         first_inn_weights["wickets_lost"] * w_crisis +
         first_inn_weights["innings_stage"] * stage_1st +
         first_inn_weights["scoring_demand"] * scoring_demand
     )
-    
+
     # ---------------- 3. Combine Chase and 1st Innings ----------------
     batting_pressure = np.where(
         df["innings"] == 2,
         chase_pressure,
         np.where(df["innings"] == 1, first_inn_pressure, 100.0)
     )
-    
+
     # Knockout tournament multiplier
     is_ko = df["knock_out"] == 1
     batting_pressure = np.where(is_ko, batting_pressure * knockout_boost, batting_pressure)
-    
+
     return pd.Series(np.clip(batting_pressure, 0.0, 100.0), index=df.index, name="pressure_batting")
 
 
@@ -140,15 +140,15 @@ def compute_bowling_pressure(
 ) -> pd.Series:
     """
     Compute Bowling Pressure Index (0-100) for every delivery.
-    
+
     Represents the difficulty and stress of the match situation the bowler is bowling into.
-    
+
     In a Chase (2nd Innings):
     - Target Closeness: Maximum when chase is in balance (RRR 6.0 - 13.0).
     - Innings Stage: Death overs defending small margins creates acute pressure.
     - Opposition Wickets Remaining: Opposition with many wickets in hand can hit freely.
     - Margin Pressure: High when runs needed is small in late overs.
-    
+
     In 1st Innings:
     - Phase Difficulty: Powerplay (overs 1-6) and Death (overs 16-20).
     - Batting Strength Remaining: Bowling against top/middle order with wickets in hand.
@@ -159,7 +159,7 @@ def compute_bowling_pressure(
     balls_rem = df["balls_remaining"].fillna(120)
     w_hand = df["wickets_in_hand"].fillna(10)
     runs_needed = df["runs_needed"].fillna(100)
-    
+
     # RRR Stress: High when chase is tight, low when game is mathematically won
     rrr_stress = np.where(
         rrr > 18.0,
@@ -174,27 +174,27 @@ def compute_bowling_pressure(
             )
         )
     )
-    
+
     # Stage Urgency
     stage_stress = np.clip((120.0 - balls_rem) / 120.0 * 100.0, 10.0, 100.0)
-    
+
     # Opposition Wickets in Hand
     w_threat = np.clip((w_hand / 10.0) * 80.0 + 10.0, 10.0, 100.0)
-    
+
     # Margin Stress in late overs
     margin_stress = np.where(
         balls_rem <= 36,
         np.clip(100.0 - (runs_needed / np.maximum(1, balls_rem) - 1.0) * 10.0, 20.0, 100.0),
         40.0
     )
-    
+
     chase_bowl = (
         chase_weights["target_closeness"] * rrr_stress +
         chase_weights["innings_stage"] * stage_stress +
         chase_weights["opposition_wickets"] * w_threat +
         chase_weights["margin_pressure"] * margin_stress
     )
-    
+
     # ---------------- 2. First Innings Bowling Pressure ----------------
     overs = df["overid"]
     phase_stress = np.where(
@@ -206,31 +206,31 @@ def compute_bowling_pressure(
             60.0 + ((overs - 15) / 5.0) * 35.0
         )
     )
-    
+
     w_bat_res = np.clip((w_hand / 10.0) * 60.0 + 20.0, 20.0, 80.0)
-    
+
     crr = df["current_run_rate"].fillna(0)
     par_rr = df["par_run_rate"].fillna(8.5)
     tempo_gap = crr - par_rr
     tempo_stress = np.clip(45.0 + tempo_gap * 8.0, 15.0, 90.0)
-    
+
     first_inn_bowl = (
         first_inn_weights["phase_difficulty"] * phase_stress +
         first_inn_weights["batting_strength"] * w_bat_res +
         first_inn_weights["tempo_threat"] * tempo_stress
     )
-    
+
     # ---------------- 3. Combine Chase and 1st Innings ----------------
     bowling_pressure = np.where(
         df["innings"] == 2,
         chase_bowl,
         np.where(df["innings"] == 1, first_inn_bowl, 100.0)
     )
-    
+
     # Knockout tournament multiplier
     is_ko = df["knock_out"] == 1
     bowling_pressure = np.where(is_ko, bowling_pressure * knockout_boost, bowling_pressure)
-    
+
     return pd.Series(np.clip(bowling_pressure, 0.0, 100.0), index=df.index, name="pressure_bowling")
 
 
@@ -242,10 +242,10 @@ def apply_pressure_indices(
     res = df.copy()
     res["pressure_batting"] = compute_batting_pressure(res).round(2)
     res["pressure_bowling"] = compute_bowling_pressure(res).round(2)
-    
+
     res["is_high_pressure_bat"] = res["pressure_batting"] >= threshold
     res["is_high_pressure_bowl"] = res["pressure_bowling"] >= threshold
-    
+
     logger.info(
         "Applied pressure indices: Mean Bat Pressure=%.2f, Mean Bowl Pressure=%.2f, HP Bat Deliveries=%d (%.1f%%), HP Bowl Deliveries=%d (%.1f%%)",
         res["pressure_batting"].mean(),

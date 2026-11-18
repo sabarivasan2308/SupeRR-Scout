@@ -117,4 +117,3 @@ def test_pbi_leaderboard_chart_preranked_without_is_eligible():
     assert len(fig.data[0].y) == 3
     # Check that highest score is at the top
     assert fig.data[0].y[-1] == "Player A"
-
